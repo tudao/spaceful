@@ -26,9 +26,23 @@ export const TEMPLATES: TemplateDefinition[] = [
   {
     id: 'laki-world',
     name: "Laki's World",
-    description: 'Dense personal dashboard with carousel goals, tabbed notes, habits, and media',
+    description: 'Botanical dashboard skin with denser spacing and stronger card presence',
     moodAffinity: ['lavender', 'rose', 'ocean'],
     vibeKeywords: ['playful', 'creative', 'focused', 'dreamy', 'energetic'],
+  },
+  {
+    id: 'sky',
+    name: 'Sky',
+    description: 'Open airy layout with floating clouds and birds in motion',
+    moodAffinity: ['ocean', 'lavender', 'sand'],
+    vibeKeywords: ['calm', 'dreamy', 'minimal', 'playful', 'creative'],
+  },
+  {
+    id: 'ocean',
+    name: 'Ocean',
+    description: 'Wave-backed layout with swimming fish and soft blue glass',
+    moodAffinity: ['ocean', 'midnight', 'lavender'],
+    vibeKeywords: ['calm', 'focused', 'grounded', 'creative', 'dreamy'],
   },
   {
     id: 'journal',
@@ -50,4 +64,3 @@ export function pickTemplate(mood: SpaceMood, vibes: string[]): string {
   }
   return Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'garden';
 }
-

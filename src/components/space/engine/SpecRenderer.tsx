@@ -98,7 +98,12 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
     }}>
       <style>{`
         @keyframes sp-sway { from { transform: rotate(-8deg) translateY(0); } to { transform: rotate(8deg) translateY(-10px); } }
+        @keyframes sp-tree-sway { from { transform: rotate(-2deg) translateX(-1px); } to { transform: rotate(3.5deg) translateX(2px); } }
+        @keyframes sp-petal { 0% { transform: translate(0,0) rotate(0deg); opacity: .05; } 20% { opacity: .6; } 100% { transform: translate(76px,18px) rotate(260deg); opacity: .04; } }
         @keyframes sp-drift { from { transform: translateX(-2%) rotate(-4deg); } to { transform: translateX(3%) rotate(4deg); } }
+        @keyframes sp-cloud { from { transform: translateX(-20vw); } to { transform: translateX(120vw); } }
+        @keyframes sp-bird { from { transform: translateX(-10vw) translateY(0); } 50% { transform: translateX(55vw) translateY(-10px); } to { transform: translateX(115vw) translateY(0); } }
+        @keyframes sp-fish { from { transform: translateX(-12vw) scaleX(1); } to { transform: translateX(118vw) scaleX(1); } }
         @media (max-width: 760px) { .spec-mid { grid-template-columns: 1fr !important; } .spec-header { align-items: flex-start !important; } }
       `}</style>
       <Decoration palette={p} spec={spec} mood={tokens.mood} />
@@ -159,4 +164,3 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
     </div>
   );
 }
-

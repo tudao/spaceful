@@ -2,6 +2,8 @@ import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
 import type { SpacePalette } from '../SpacePage';
 import type { TemplateSpec, TemplateSpecOverride } from './types';
 
+const CORE_SECTIONS = ['goals', 'currently', 'focus_hero', 'notepad', 'kanban', 'habit_tracker', 'reading_list', 'photo', 'quote'] as const;
+
 export function hexA(hex: string, alpha: number): string {
   if (hex.startsWith('rgba') || hex.startsWith('rgb')) return hex;
   const h = hex.replace('#', '');
@@ -28,28 +30,42 @@ export function mergeSpec(base: TemplateSpec, override?: TemplateSpecOverride): 
 export const BASE_TEMPLATE_SPECS: Record<string, TemplateSpec> = {
   garden: {
     version: 1,
-    layout: { header_style: 'botanical', sections: ['goals', 'currently', 'focus_hero', 'notepad', 'kanban'], max_width: 980, density: 'rich' },
+    layout: { header_style: 'botanical', sections: [...CORE_SECTIONS], max_width: 980, density: 'rich' },
     decoration: { type: 'botanicals', density: 'lush', animated: true, fixed_background: true },
     cards: { style: 'glass', radius: 20, shadow: 'soft' },
     typography: { title_scale: 'xl', weight: 800, header_uppercase: false },
   },
   'laki-world': {
     version: 1,
-    layout: { header_style: 'botanical', sections: ['goals', 'currently', 'focus_hero', 'notepad', 'kanban', 'habit_tracker', 'reading_list', 'photo'], max_width: 1100, density: 'rich' },
+    layout: { header_style: 'botanical', sections: [...CORE_SECTIONS], max_width: 1100, density: 'rich' },
     decoration: { type: 'botanicals', density: 'lush', animated: true, fixed_background: true },
     cards: { style: 'glass', radius: 20, shadow: 'medium' },
     typography: { title_scale: 'xl', weight: 800, header_uppercase: false },
   },
   cosmos: {
     version: 1,
-    layout: { header_style: 'cosmic', sections: ['goals', 'currently', 'focus_hero', 'notepad', 'streak'], max_width: 980, density: 'balanced' },
+    layout: { header_style: 'cosmic', sections: [...CORE_SECTIONS], max_width: 980, density: 'balanced' },
     decoration: { type: 'starfield', density: 'medium', animated: true, fixed_background: true },
     cards: { style: 'glass', radius: 20, shadow: 'medium' },
     typography: { title_scale: '2xl', weight: 800, header_uppercase: false },
   },
+  sky: {
+    version: 1,
+    layout: { header_style: 'minimal', sections: [...CORE_SECTIONS], max_width: 980, density: 'balanced' },
+    decoration: { type: 'clouds', density: 'medium', animated: true, fixed_background: true },
+    cards: { style: 'solid', radius: 20, shadow: 'soft' },
+    typography: { title_scale: 'xl', weight: 800, header_uppercase: false },
+  },
+  ocean: {
+    version: 1,
+    layout: { header_style: 'wave', sections: [...CORE_SECTIONS], max_width: 980, density: 'rich' },
+    decoration: { type: 'waves', density: 'lush', animated: true, fixed_background: true },
+    cards: { style: 'glass', radius: 20, shadow: 'soft' },
+    typography: { title_scale: 'xl', weight: 800, header_uppercase: false },
+  },
   journal: {
     version: 1,
-    layout: { header_style: 'editorial', sections: ['goals', 'currently', 'focus_hero', 'notepad', 'quote'], max_width: 860, density: 'spacious' },
+    layout: { header_style: 'editorial', sections: [...CORE_SECTIONS], max_width: 860, density: 'spacious' },
     decoration: { type: 'minimal', density: 'minimal', animated: false, fixed_background: false },
     cards: { style: 'paper', radius: 16, shadow: 'soft' },
     typography: { title_scale: 'display', weight: 800, header_uppercase: false },
