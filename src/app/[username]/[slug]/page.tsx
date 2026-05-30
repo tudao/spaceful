@@ -1,4 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { SpaceView } from '../SpaceView';
 
 interface Props {
   params: Promise<{ username: string; slug: string }>;
@@ -10,11 +13,54 @@ export default async function UserSlugSpacePage({ params }: Props) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // TODO: fetch space by username + slug
+  const { data: profile } = await (supabase as any)
+    .from('profiles')
+    .select('user_id, username')
+    .eq('username', username)
+    .single() as { data: { user_id: string; username: string } | null };
+
+  if (!profile) notFound();
+
+  const { data: space } = await (supabase as any)
+    .from('spaces')
+    .select('id, slug, display_name, design_tokens, content_json, visibility, reactions_enabled')
+    .eq('user_id', profile.user_id)
+    .eq('slug', slug)
+    .single() as {
+      data: {
+        id: string; slug: string; display_name: string | null;
+        design_tokens: Record<string, unknown> | null;
+        content_json: Record<string, unknown> | null;
+        visibility: string; reactions_enabled: boolean;
+      } | null;
+    };
+
+  if (!space) notFound();
+
+  const isOwner = user?.id === profile.user_id;
+
+  if (!isOwner && space.visibility === 'private') {
+    return <SpaceView username={username} isPrivate />;
+  }
+
+  const rxQuery = (supabase as any)
+    .from('reactions')
+    .select('id, message, created_at')
+    .eq('space_id', space.id)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (!isOwner) rxQuery.eq('is_visible', true);
+  const { data: reactions } = await rxQuery as {
+    data: { id: string; message: string; created_at: string }[] | null;
+  };
 
   return (
-    <main>
-      <p>Space: {username}/{slug} — coming soon</p>
-    </main>
+    <SpaceView
+      username={username}
+      space={space}
+      isOwner={isOwner}
+      reactions={reactions ?? []}
+    />
   );
 }

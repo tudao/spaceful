@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Lock, Link, Globe, Sparkles, Trash2 } from 'lucide-react';
+import { Lock, Link, Globe, Sparkles, Trash2, Check } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { useToast } from '@/components/ui/Toast';
+import { TEMPLATES } from '@/components/space/templates/types';
 
 type Visibility = 'private' | 'link_only' | 'public';
 
@@ -15,8 +16,10 @@ interface SettingsDrawerProps {
   galleryStatus?: string;
   reactionsEnabled?: boolean;
   lastGenerated?: string;
+  currentTemplateId?: string;
   onRegenerate?: () => void;
   onDelete?: () => void;
+  onSwitchTemplate?: (id: string) => void;
 }
 
 const PRIVACY_OPTIONS = [
@@ -31,13 +34,16 @@ export function SettingsDrawer({
   visibility: initialVis = 'link_only',
   reactionsEnabled: initialRx = true,
   lastGenerated = 'May 30',
+  currentTemplateId = 'garden',
   onRegenerate,
   onDelete,
+  onSwitchTemplate,
 }: SettingsDrawerProps) {
   const { toast } = useToast();
-  const [vis, setVis]       = useState<Visibility>(initialVis);
-  const [rx, setRx]         = useState(initialRx);
-  const [name, setName]     = useState(initialName);
+  const [vis, setVis]           = useState<Visibility>(initialVis);
+  const [rx, setRx]             = useState(initialRx);
+  const [name, setName]         = useState(initialName);
+  const [activeTemplate, setActiveTemplate] = useState(currentTemplateId);
 
   function pickVis(v: Visibility) {
     const wasPrivate = vis !== 'public' && v === 'public';
@@ -92,6 +98,36 @@ export function SettingsDrawer({
             <input type="checkbox" checked={rx} onChange={e => setRx(e.target.checked)} />
             <span className="track" /><span className="thumb" />
           </label>
+        </div>
+      </div>
+
+      {/* template picker */}
+      <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--app-border)' }}>
+        <h5 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: 12 }}>Template</h5>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {TEMPLATES.map(t => (
+            <button
+              key={t.id}
+              onClick={() => {
+                setActiveTemplate(t.id);
+                onSwitchTemplate?.(t.id);
+                toast(`Switched to ${t.name} template`, 'success');
+              }}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+                padding: '11px 14px', borderRadius: 12, cursor: 'pointer',
+                border: `1.5px solid ${activeTemplate === t.id ? 'var(--app-accent)' : 'var(--app-border)'}`,
+                background: activeTemplate === t.id ? 'var(--app-accent-soft)' : 'var(--app-surface)',
+                textAlign: 'left', fontFamily: 'var(--font)', transition: 'var(--t-fast)',
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: activeTemplate === t.id ? 'var(--app-accent-ink)' : 'var(--app-text)' }}>{t.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--app-text-2)', marginTop: 2, lineHeight: 1.4 }}>{t.description}</div>
+              </div>
+              {activeTemplate === t.id && <Check size={16} style={{ color: 'var(--app-accent)', flexShrink: 0, marginTop: 2 }} />}
+            </button>
+          ))}
         </div>
       </div>
 

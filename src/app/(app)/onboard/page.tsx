@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Sparkles, Check, RefreshCw } from 'lucide-react';
 import { MiniSpace } from '@/components/space/MiniSpace';
 import { Fireflies } from '@/components/space/Fireflies';
 import { SPACE_PALETTES, type SpaceMood, CREDIT_COSTS } from '@/lib/utils';
+import { publishSpace } from './actions';
 
 const VIBES = ['calm','creative','focused','cozy','bold','playful','minimal','dreamy','grounded','energetic'];
 const MOODS = Object.keys(SPACE_PALETTES) as SpaceMood[];
@@ -28,21 +29,36 @@ interface State {
   layout: 'spacious' | 'rich';
 }
 
+// Shape returned by /api/generate when stage === 'done'
+interface GeneratedTokens {
+  mood: SpaceMood;
+  layout_variant: 'spacious' | 'rich';
+  animation_level: string;
+  palette: Record<string, string>;
+  tagline: string;
+  hero_title_placeholder: string;
+  notepad_starter: string;
+  currently_placeholder: string;
+}
+
 export default function OnboardPage() {
   const router = useRouter();
 
   const [step, setStep]   = useState(0);
   const [phase, setPhase] = useState<Phase>('steps');
   const [state, setState] = useState<State>({ name: '', vibes: [], goal: '', mood: 'lavender', layout: 'spacious' });
+  const [publishError, setPublishError] = useState('');
+  const [isPending, startTransition] = useTransition();
 
-  // generation animation state
-  const [genLines, setGenLines]       = useState<{ show: boolean; done: boolean }[]>(GEN_STEPS.map(() => ({ show: false, done: false })));
-  const genTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // generation SSE state
+  const [currentStage, setCurrentStage] = useState('');
+  const [stagesDone,   setStagesDone]   = useState<string[]>([]);
+  const [genTokens, setGenTokens]       = useState<GeneratedTokens | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const TOTAL = 5;
   const p = SPACE_PALETTES[state.mood];
 
-  // ambient bg per mood
   const ambientStyle: React.CSSProperties = {
     background: `linear-gradient(160deg, ${p.bg}, ${p.bg2})`,
   };
@@ -57,23 +73,66 @@ export default function OnboardPage() {
     });
   }
 
-  function startGeneration() {
+  async function startGeneration() {
     setPhase('generating');
-    genTimers.current.forEach(clearTimeout);
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    GEN_STEPS.forEach((_, i) => {
-      timers.push(setTimeout(() => {
-        setGenLines(prev => prev.map((l, j) => j === i ? { ...l, show: true } : l));
-      }, i * 1400 + 300));
-      timers.push(setTimeout(() => {
-        setGenLines(prev => prev.map((l, j) => j === i ? { ...l, done: true } : l));
-      }, i * 1400 + 700));
-    });
-    timers.push(setTimeout(() => setPhase('publish'), GEN_STEPS.length * 1400 + 1400));
-    genTimers.current = timers;
+    setCurrentStage('');
+    setStagesDone([]);
+    setGenTokens(null);
+
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state),
+        signal: ctrl.signal,
+      });
+
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+
+      const reader = res.body.getReader();
+      const dec    = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+
+        // Parse SSE lines
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const event = JSON.parse(line.slice(6)) as {
+            stage: string; progress?: number; tokens?: GeneratedTokens;
+          };
+
+          if (event.stage === 'done' && event.tokens) {
+            setGenTokens(event.tokens);
+            setStagesDone(prev => [...prev, currentStage]);
+            setCurrentStage('');
+            setPhase('publish');
+          } else {
+            setStagesDone(prev => currentStage && !prev.includes(currentStage) ? [...prev, currentStage] : prev);
+            setCurrentStage(event.stage);
+          }
+        }
+      }
+    } catch (err: unknown) {
+      if ((err as Error).name === 'AbortError') return;
+      console.error('[onboard] generation error', err);
+      // Fall through to publish with no AI tokens — publishSpace uses fallback
+      setGenTokens(null);
+      setPhase('publish');
+    }
   }
 
-  useEffect(() => () => genTimers.current.forEach(clearTimeout), []);
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
 
   const moodColor = p.accent;
 
@@ -281,37 +340,35 @@ export default function OnboardPage() {
         </div>
       )}
 
-      {/* generation loading screen */}
+      {/* generation loading screen — driven by real SSE events */}
       {phase === 'generating' && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 24 }}>
           <Fireflies color={`${p.accent}e6`} count={30} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{ fontSize: 'clamp(26px,4vw,34px)', fontWeight: 800, marginBottom: 34, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ animation: 'spin 3s linear infinite', display: 'inline-block' }}><Sparkles size={32} style={{ color: moodColor }} /></span>
+              <span style={{ animation: 'spin 3s linear infinite', display: 'inline-block' }}>
+                <Sparkles size={32} style={{ color: p.accent }} />
+              </span>
               Creating your space…
             </div>
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: 340, maxWidth: '90vw' }}>
-              {GEN_STEPS.map((label, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    opacity: genLines[i].show ? 1 : 0,
-                    transform: genLines[i].show ? 'none' : 'translateY(8px)',
-                    transition: '.5s var(--ease)',
-                  }}
-                >
+              {/* completed stages */}
+              {stagesDone.map((label, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: 1 }}>
                   <span style={{ flex: 1, textAlign: 'left', fontSize: 15, fontWeight: 700, color: 'var(--app-text)' }}>{label}</span>
-                  {genLines[i].done ? (
-                    <Check size={18} style={{ color: 'var(--app-success)', flexShrink: 0 }} />
-                  ) : (
-                    <span style={{ width: 70, height: 6, borderRadius: 99, background: 'var(--app-border)', overflow: 'hidden', flexShrink: 0 }}>
-                      <span style={{ display: 'block', height: '100%', width: genLines[i].show ? '100%' : '0%', background: moodColor, borderRadius: 99, transition: 'width 1s var(--ease)' }} />
-                    </span>
-                  )}
+                  <Check size={18} style={{ color: 'var(--app-success)', flexShrink: 0 }} />
                 </div>
               ))}
+              {/* in-progress stage */}
+              {currentStage && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, animation: 'fadeUp .4s ease' }}>
+                  <span style={{ flex: 1, textAlign: 'left', fontSize: 15, fontWeight: 700, color: 'var(--app-text)' }}>{currentStage}</span>
+                  <span style={{ width: 70, height: 6, borderRadius: 99, background: 'var(--app-border)', overflow: 'hidden', flexShrink: 0 }}>
+                    <span style={{ display: 'block', height: '100%', width: '60%', background: p.accent, borderRadius: 99, transition: 'width 0.8s ease', animation: 'shimmer 1.2s ease-in-out infinite' }} />
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -336,13 +393,30 @@ export default function OnboardPage() {
             />
           </div>
           <div style={{ display: 'flex', gap: 12, marginTop: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Link href="/spaces" className="btn btn-primary btn-lg">
-              <Check size={18} /> It's perfect → Publish
-            </Link>
-            <button className="btn btn-secondary btn-lg" onClick={startGeneration}>
+            <button
+              className="btn btn-primary btn-lg"
+              disabled={isPending}
+              onClick={() => {
+                setPublishError('');
+                startTransition(async () => {
+                  const result = await publishSpace({ ...state, generatedTokens: genTokens ?? undefined });
+                  if (result?.error === 'insufficient_credits') {
+                    setPublishError("You don't have enough credits. Buy more to publish.");
+                  } else if (result?.error) {
+                    setPublishError(result.error);
+                  }
+                });
+              }}
+            >
+              {isPending ? 'Publishing…' : <><Check size={18} /> It&apos;s perfect → Publish</>}
+            </button>
+            <button className="btn btn-secondary btn-lg" onClick={startGeneration} disabled={isPending}>
               <RefreshCw size={18} /> Regenerate · {CREDIT_COSTS.regeneration} credits
             </button>
           </div>
+          {publishError && (
+            <div style={{ fontSize: 13, color: 'var(--app-danger)', marginTop: 12, textAlign: 'center' }}>{publishError}</div>
+          )}
           <div style={{ fontSize: 13, color: 'var(--app-text-2)', marginTop: 16 }}>
             Your space will be live at <strong style={{ color: 'var(--app-accent-ink)' }}>spaceful.io/{state.name?.toLowerCase().replace(/\s+/g, '-') || 'your-space'}</strong>
           </div>

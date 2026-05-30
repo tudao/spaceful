@@ -361,6 +361,7 @@ on conflict do nothing;
 -- Row-Level Security
 -- ─────────────────────────────────────────────────────────
 alter table profiles             enable row level security;
+alter table username_blocklist   enable row level security;
 alter table spaces               enable row level security;
 alter table credit_transactions  enable row level security;
 alter table reactions            enable row level security;
@@ -402,6 +403,9 @@ create policy "templates: public read" on prompt_templates  for select using (tr
 
 -- login_history: owner only
 create policy "login_history: owner"  on login_history for select using (auth.uid() = user_id);
+
+-- username_blocklist: public read (needed for client-side validation), no writes from client
+create policy "blocklist: public read" on username_blocklist for select using (true);
 
 -- ─────────────────────────────────────────────────────────
 -- Indexes (query patterns)

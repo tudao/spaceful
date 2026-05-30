@@ -31,14 +31,28 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected = PROTECTED_PATHS.some(p => pathname.startsWith(p));
-  const isAdmin     = ADMIN_PATHS.some(p => pathname.startsWith(p));
+  const isAdminPath = ADMIN_PATHS.some(p => pathname.startsWith(p));
   const isAuthPage  = AUTH_PATHS.some(p => pathname.startsWith(p));
 
-  if ((isProtected || isAdmin) && !user) {
+  if ((isProtected || isAdminPath) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
+  }
+
+  if (isAdminPath && user) {
+    // role check — fetch from profiles (lightweight: single indexed lookup)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+    if ((profile as { role?: string } | null)?.role !== 'admin') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/spaces';
+      return NextResponse.redirect(url);
+    }
   }
 
   if (isAuthPage && user) {

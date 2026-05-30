@@ -1,28 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { Plus, Globe, Link2, Lock, Star } from 'lucide-react';
 import { MiniSpace } from '@/components/space/MiniSpace';
 import { CreditPill } from '@/components/ui/CreditPill';
+import { createClient } from '@/lib/supabase/server';
 import type { SpaceMood } from '@/lib/utils';
-
-interface SpaceCard {
-  id: string;
-  palette: SpaceMood;
-  name: string;
-  url: string;
-  slug: string;
-  username: string;
-  status: 'public' | 'link_only' | 'private';
-  primary: boolean;
-  updated: string;
-  goals: string[];
-}
-
-// Demo data — replace with createClient() + DB query
-const SPACES: SpaceCard[] = [
-  { id: '1', palette: 'lavender', name: "Laki's World",    url: 'spaceful.io/laki',             slug: '',             username: 'laki', status: 'public',    primary: true,  updated: '2 hours ago', goals: ['write', 'run', 'read'] },
-  { id: '2', palette: 'rose',     name: 'nina-notebook',   url: 'spaceful.io/laki/nina-notebook', slug: 'nina-notebook', username: 'laki', status: 'private',   primary: false, updated: '3 days ago',  goals: ['paint', 'plant'] },
-  { id: '3', palette: 'ocean',    name: 'koa-surf-log',    url: 'spaceful.io/laki/koa-surf-log',  slug: 'koa-surf-log',  username: 'laki', status: 'link_only', primary: false, updated: 'last week',   goals: ['surf', 'rest'] },
-];
 
 const STATUS_MAP = {
   public:    { cls: 'badge-success', icon: Globe, label: 'Public' },
@@ -30,17 +13,61 @@ const STATUS_MAP = {
   private:   { cls: 'badge-neutral', icon: Lock,  label: 'Private' },
 } as const;
 
-const CREDITS = 14;
+function timeAgo(dateStr: string) {
+  const s = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (s < 60)    return 'just now';
+  if (s < 3600)  return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 86400 * 7) return `${Math.floor(s / 86400)}d ago`;
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
-export default function SpacesPage() {
+export default async function SpacesPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login?next=/spaces');
+
+  const { data: profile } = await (supabase as any)
+    .from('profiles')
+    .select('username, credit_balance, subscription_status')
+    .eq('user_id', user.id)
+    .single() as {
+      data: {
+        username: string;
+        credit_balance: number;
+        subscription_status: string;
+      } | null;
+    };
+
+  if (!profile) redirect('/login?next=/spaces');
+
+  const { data: spaces } = await (supabase as any)
+    .from('spaces')
+    .select('id, slug, display_name, design_tokens, content_json, visibility, is_primary, updated_at')
+    .eq('user_id', user.id)
+    .order('is_primary', { ascending: false })
+    .order('updated_at', { ascending: false }) as {
+      data: {
+        id: string;
+        slug: string;
+        display_name: string | null;
+        design_tokens: Record<string, unknown> | null;
+        content_json: Record<string, unknown> | null;
+        visibility: 'public' | 'link_only' | 'private';
+        is_primary: boolean;
+        updated_at: string;
+      }[] | null;
+    };
+
+  const list = spaces ?? [];
+
   return (
     <main className="page">
       <div className="page-head">
         <div>
           <h1 className="t-h1">My Spaces</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, fontSize: 14, color: 'var(--app-text-2)' }}>
-            <CreditPill balance={CREDITS} />
-            <span>· Next refresh in 18 days</span>
+            <CreditPill balance={profile.credit_balance} />
           </div>
         </div>
         <Link href="/spaces/new" className="btn btn-primary">
@@ -49,35 +76,46 @@ export default function SpacesPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 22 }}>
-        {SPACES.map(s => {
-          const st = STATUS_MAP[s.status];
+        {list.map(s => {
+          const st = STATUS_MAP[s.visibility] ?? STATUS_MAP.private;
           const Icon = st.icon;
-          const href = s.primary ? `/${s.username}` : `/${s.username}/${s.slug}`;
+          const href = s.is_primary
+            ? `/${profile.username}`
+            : `/${profile.username}/${s.slug}`;
+          const displayUrl = s.is_primary
+            ? `spaceful.io/${profile.username}`
+            : `spaceful.io/${profile.username}/${s.slug}`;
+
+          const cj = (s.content_json ?? {}) as Record<string, unknown>;
+          const dt = (s.design_tokens ?? {}) as Record<string, unknown>;
+          const title = (cj.title as string) || s.display_name || 'Untitled';
+          const mood  = (dt.mood as SpaceMood) || 'lavender';
+          const goals = Array.isArray(cj.goals)
+            ? (cj.goals as { text: string }[]).map(g => g.text).slice(0, 3)
+            : [];
+
           return (
             <div key={s.id} className="card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'var(--t)' }}>
-              {/* thumbnail */}
               <div style={{ height: 180, position: 'relative' }}>
-                <MiniSpace palette={s.palette} title={s.name} goals={s.goals} style={{ height: '100%' }} />
-                {/* badges */}
+                <MiniSpace palette={mood} title={title} goals={goals} style={{ height: '100%' }} />
                 <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 6 }}>
                   <span className={`badge ${st.cls}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <Icon size={13} /> {st.label}
                   </span>
-                  {s.status === 'private' && <span className="badge badge-neutral">Draft</span>}
                 </div>
-                {s.primary && (
-                  <span className="badge badge-gold" style={{ position: 'absolute', top: 12, right: 12 }}>
+                {s.is_primary && (
+                  <span className="badge badge-gold" style={{ position: 'absolute', top: 12, right: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <Star size={13} /> Primary
                   </span>
                 )}
               </div>
-              {/* body */}
               <div style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ fontSize: 17, fontWeight: 800 }}>{s.name}</div>
-                <div style={{ fontFamily: 'ui-monospace,monospace', fontSize: 12.5, color: 'var(--app-text-2)' }}>{s.url}</div>
-                <div style={{ fontSize: 12.5, color: 'var(--app-text-muted)', marginTop: 2 }}>Updated {s.updated}</div>
+                <div style={{ fontSize: 17, fontWeight: 800 }}>{title}</div>
+                <div style={{ fontFamily: 'ui-monospace,monospace', fontSize: 12.5, color: 'var(--app-text-2)' }}>{displayUrl}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--app-text-muted)', marginTop: 2 }}>
+                  Updated {timeAgo(s.updated_at)}
+                </div>
               </div>
-              {/* actions */}
               <div style={{ display: 'flex', gap: 8, padding: '0 18px 18px' }}>
                 <Link href={href} className="btn btn-primary btn-sm" style={{ flex: 1 }}>Open</Link>
                 <Link href={href} className="btn btn-secondary btn-sm" style={{ flex: 1 }}>Settings</Link>
@@ -86,13 +124,19 @@ export default function SpacesPage() {
           );
         })}
 
-        {/* new space card */}
+        {list.length === 0 && (
+          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 24px', color: 'var(--app-text-2)' }}>
+            <p style={{ marginBottom: 20, fontSize: 16 }}>No spaces yet. Create your first one.</p>
+            <Link href="/onboard" className="btn btn-primary">Start designing →</Link>
+          </div>
+        )}
+
         <Link
           href="/spaces/new"
           style={{
             border: '2px dashed var(--app-border-strong)', borderRadius: 'var(--r-card)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: 10, minHeight: 380, cursor: 'pointer', transition: 'var(--t)',
+            gap: 10, minHeight: 280, cursor: 'pointer', transition: 'var(--t)',
             color: 'var(--app-text-2)', textAlign: 'center', padding: 24, textDecoration: 'none',
           }}
         >
