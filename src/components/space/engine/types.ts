@@ -47,6 +47,11 @@ export interface TemplateSpec {
     animated: boolean;
     fixed_background: boolean;
   };
+  scene?: {
+    image: string;
+    position: 'center' | 'left' | 'right';
+    overlay: 'light' | 'medium' | 'dark';
+  };
   cards: {
     style: 'glass' | 'solid' | 'outlined' | 'paper';
     radius: 8 | 12 | 16 | 20 | 24;
@@ -62,6 +67,7 @@ export interface TemplateSpec {
 export type TemplateSpecOverride = Partial<{
   layout: Partial<TemplateSpec['layout']>;
   decoration: Partial<TemplateSpec['decoration']>;
+  scene: Partial<NonNullable<TemplateSpec['scene']>>;
   cards: Partial<TemplateSpec['cards']>;
   typography: Partial<TemplateSpec['typography']>;
 }>;

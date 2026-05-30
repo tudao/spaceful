@@ -28,7 +28,14 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
   const card = cardStyle(spec, p, tokens.mood);
   const border = hexA(p.accent, 0.28);
   const muted = hexA(p.text2, 0.66);
-  const sceneHeader = tokens.template_id === 'laki-world' || spec.layout.header_style === 'botanical' || spec.layout.header_style === 'wave' || spec.decoration.type === 'clouds';
+  const imageScene = Boolean(spec.scene?.image);
+  const sceneHeader = imageScene || tokens.template_id === 'laki-world' || spec.layout.header_style === 'botanical' || spec.layout.header_style === 'wave' || spec.decoration.type === 'clouds';
+  const scenePosition = spec.scene?.position === 'left' ? 'left center' : spec.scene?.position === 'center' ? 'center center' : 'right center';
+  const sceneOverlay = spec.scene?.overlay === 'dark'
+    ? 'linear-gradient(90deg, rgba(8,12,34,.82), rgba(8,12,34,.46) 43%, rgba(8,12,34,.10))'
+    : spec.scene?.overlay === 'medium'
+      ? 'linear-gradient(90deg, rgba(255,255,255,.68), rgba(255,255,255,.35) 42%, rgba(255,255,255,.04))'
+      : 'linear-gradient(90deg, rgba(255,255,255,.76), rgba(255,255,255,.44) 40%, rgba(255,255,255,.08))';
 
   function commit(patch: Partial<SpaceContent>) {
     const next = { ...content, ...patch };
@@ -87,8 +94,15 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
 
   const headerScene = sceneHeader ? (
     <div aria-hidden className={`sp-scene sp-scene-${spec.decoration.type}`} style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: spec.cards.radius + 4, pointerEvents: 'none' }}>
-      <div className="sp-scene-sky" style={{ position: 'absolute', inset: 0, background: `linear-gradient(155deg, ${hexA('#ffffff', 0.58)}, transparent 36%), radial-gradient(circle at 82% 18%, ${hexA(p.accent2, 0.28)}, transparent 26%), linear-gradient(135deg, ${hexA(p.accent2, 0.18)}, ${hexA(p.accent, 0.10)})` }} />
-      {(spec.decoration.type === 'botanicals' || spec.decoration.type === 'forest' || spec.decoration.type === 'petals') && (
+      {imageScene ? (
+        <>
+          <div className="sp-scene-image" style={{ position: 'absolute', inset: 0, backgroundImage: `url(${spec.scene!.image})`, backgroundSize: 'cover', backgroundPosition: scenePosition, transform: 'scale(1.018)' }} />
+          <div className="sp-scene-vignette" style={{ position: 'absolute', inset: 0, background: `${sceneOverlay}, radial-gradient(circle at 92% 8%, ${hexA(p.accent2, 0.26)}, transparent 32%), linear-gradient(180deg, rgba(255,255,255,.04), ${hexA(p.bg, 0.12)})` }} />
+        </>
+      ) : (
+        <div className="sp-scene-sky" style={{ position: 'absolute', inset: 0, background: `linear-gradient(155deg, ${hexA('#ffffff', 0.58)}, transparent 36%), radial-gradient(circle at 82% 18%, ${hexA(p.accent2, 0.28)}, transparent 26%), linear-gradient(135deg, ${hexA(p.accent2, 0.18)}, ${hexA(p.accent, 0.10)})` }} />
+      )}
+      {!imageScene && (spec.decoration.type === 'botanicals' || spec.decoration.type === 'forest' || spec.decoration.type === 'petals') && (
         <>
           <svg viewBox="0 0 640 210" preserveAspectRatio="none" style={{ position: 'absolute', inset: 'auto 0 0', width: '100%', height: '78%', opacity: 0.9 }}>
             <path d="M0 168 C96 130 160 158 246 132 C340 104 410 126 512 100 C578 84 620 94 640 86 L640 210 L0 210Z" fill={hexA(p.accent, 0.14)} />
@@ -107,6 +121,16 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
           </svg>
           {Array.from({ length: 7 }).map((_, i) => (
             <span key={i} className="sp-header-petal" style={{ left: `${8 + i * 13}%`, top: `${20 + (i * 11) % 38}%`, background: hexA(i % 2 ? p.accent2 : p.accent, 0.55), animationDelay: `${-i * 1.1}s` }} />
+          ))}
+        </>
+      )}
+      {imageScene && (spec.decoration.type === 'botanicals' || spec.decoration.type === 'forest' || spec.decoration.type === 'petals') && (
+        <>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <span key={i} className="sp-header-petal" style={{ left: `${6 + i * 9}%`, top: `${18 + (i * 13) % 54}%`, background: hexA(i % 2 ? p.accent2 : p.accent, 0.58), animationDelay: `${-i * 1.05}s` }} />
+          ))}
+          {Array.from({ length: 9 }).map((_, i) => (
+            <span key={`firefly-${i}`} className="sp-firefly" style={{ left: `${42 + (i * 7) % 54}%`, top: `${12 + (i * 11) % 72}%`, animationDelay: `${-i * 0.8}s`, background: i % 2 ? '#fff7a8' : p.accent2 }} />
           ))}
         </>
       )}
@@ -161,21 +185,38 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
         @keyframes sp-header-cloud { from { transform: translateX(-210px); } to { transform: translateX(calc(100vw + 220px)); } }
         @keyframes sp-header-wave { from { transform: translateX(-4%) skewX(-5deg); } to { transform: translateX(4%) skewX(5deg); } }
         @keyframes sp-header-fish { from { transform: translateX(-90px) translateY(0); } 50% { transform: translateX(54vw) translateY(-8px); } to { transform: translateX(calc(100vw + 90px)) translateY(2px); } }
+        @keyframes sp-scene-breathe { from { transform: scale(1.018) translateY(0); } to { transform: scale(1.045) translateY(-5px); } }
+        @keyframes sp-firefly { 0%, 100% { transform: translate(0,0) scale(.7); opacity: .18; } 35% { transform: translate(16px,-12px) scale(1); opacity: .86; } 70% { transform: translate(-8px,10px) scale(.82); opacity: .32; } }
+        .sp-scene-image { animation: sp-scene-breathe 16s ease-in-out infinite alternate; }
         .sp-header-stem { animation: sp-header-stem 4.4s ease-in-out infinite; }
         .sp-header-petal { position: absolute; width: 8px; height: 5px; border-radius: 70% 40% 70% 40%; animation: sp-header-petal 9s ease-in-out infinite; }
         .sp-header-cloud { position: absolute; left: -220px; height: auto; opacity: .68; filter: drop-shadow(0 16px 18px rgba(82,108,134,.12)); animation: sp-header-cloud 32s linear infinite; }
         .sp-header-sun { position: absolute; right: 7%; top: 9%; width: 130px; height: 130px; border-radius: 50%; filter: blur(1px); opacity: .72; }
         .sp-header-wave { position: absolute; left: -8%; right: -8%; height: 92px; border-radius: 50% 50% 0 0; animation: sp-header-wave 5.4s ease-in-out infinite alternate; }
         .sp-header-fish { position: absolute; left: -96px; width: 48px; opacity: .48; animation: sp-header-fish 17s linear infinite; }
+        .sp-firefly { position: absolute; width: 5px; height: 5px; border-radius: 50%; box-shadow: 0 0 14px currentColor; animation: sp-firefly 4.8s ease-in-out infinite; }
         .spec-header-scene::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, var(--sp-accent), var(--sp-accent2), #f4a89a, var(--sp-accent)); background-size: 300% 100%; animation: sp-shimmer 4.8s linear infinite; }
         @keyframes sp-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
         @media (max-width: 760px) { .spec-mid { grid-template-columns: 1fr !important; } .spec-header { align-items: flex-start !important; } .spec-header-scene { min-height: 300px !important; } }
       `}</style>
+      {imageScene && (
+        <div aria-hidden style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+          backgroundImage: `linear-gradient(180deg, ${hexA(p.bg, 0.50)}, ${hexA(p.bg2, 0.82)}), url(${spec.scene!.image})`,
+          backgroundSize: 'cover',
+          backgroundPosition: scenePosition,
+          opacity: 0.28,
+          filter: 'saturate(1.08)',
+        }} />
+      )}
       <Decoration palette={p} spec={spec} mood={tokens.mood} />
 
       <main style={{ position: 'relative', zIndex: 1, maxWidth: spec.layout.max_width, margin: '0 auto', padding: spec.layout.density === 'spacious' ? '56px clamp(20px,5vw,48px) 84px' : '44px clamp(18px,4vw,40px) 76px' }}>
         <header className={`spec-header${sceneHeader ? ' spec-header-scene' : ''}`} style={{
-          ...sceneHeader ? card : undefined,
+          ...(sceneHeader ? card : {}),
           position: 'relative',
           display: 'flex',
           justifyContent: 'space-between',
