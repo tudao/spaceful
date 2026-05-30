@@ -112,6 +112,7 @@ function MinimalDecoration() {
 }
 
 function WavesDecoration({ palette, spec }: DecorationProps) {
+  const fishCount = spec.decoration.density === 'lush' ? 12 : 7;
   return (
     <div aria-hidden style={{ position: spec.decoration.fixed_background ? 'fixed' : 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
       {[0, 1, 2].map(i => (
@@ -126,21 +127,36 @@ function WavesDecoration({ palette, spec }: DecorationProps) {
           animation: spec.decoration.animated ? `sp-drift ${8 + i * 2}s ease-in-out infinite alternate` : undefined,
         }} />
       ))}
-      {Array.from({ length: spec.decoration.density === 'lush' ? 11 : 6 }).map((_, i) => (
-        <svg key={`fish-${i}`} viewBox="0 0 42 18" style={{
+      {Array.from({ length: fishCount }).map((_, i) => (
+        <svg key={`fish-${i}`} viewBox="0 0 48 20" style={{
           position: 'absolute',
-          width: 34 + (i % 3) * 10,
-          height: 18,
-          left: '-8%',
+          width: 38 + (i % 3) * 12,
+          height: 20,
+          left: `${-18 - (i % 4) * 10}%`,
           top: `${38 + (i * 7) % 42}%`,
           color: i % 2 ? palette.accent : palette.accent2,
-          opacity: 0.22 + (i % 3) * 0.08,
-          animation: spec.decoration.animated ? `sp-fish ${18 + (i % 5) * 3}s linear ${-(i * 2)}s infinite` : undefined,
+          opacity: 0.24 + (i % 3) * 0.08,
+          animation: spec.decoration.animated ? `sp-fish ${20 + (i % 5) * 4}s linear ${-(i * 3)}s infinite` : undefined,
         }}>
-          <path d="M3 9 C10 2 25 2 34 9 C25 16 10 16 3 9Z" fill="currentColor" />
-          <path d="M34 9 L41 4 L41 14Z" fill="currentColor" />
-          <circle cx="12" cy="7" r="1.2" fill="rgba(255,255,255,.8)" />
+          <path d="M5 10 L14 4 L14 16 Z" fill="currentColor" opacity=".78" />
+          <path d="M12 10 C21 1 39 3 45 10 C39 17 21 19 12 10Z" fill="currentColor" />
+          <path d="M22 6 C26 9 26 11 22 15" fill="none" stroke="rgba(255,255,255,.38)" strokeWidth="1.1" strokeLinecap="round" />
+          <circle cx="38.5" cy="8" r="1.25" fill="rgba(255,255,255,.86)" />
+          <circle cx="39" cy="8" r=".45" fill="rgba(20,35,52,.45)" />
         </svg>
+      ))}
+      {Array.from({ length: spec.decoration.density === 'lush' ? 22 : 12 }).map((_, i) => (
+        <span key={`bubble-${i}`} style={{
+          position: 'absolute',
+          left: `${(i * 17) % 98}%`,
+          bottom: `${-4 + (i % 4) * 2}%`,
+          width: 4 + (i % 4) * 3,
+          height: 4 + (i % 4) * 3,
+          borderRadius: '50%',
+          border: `1px solid ${hexA('#ffffff', 0.38)}`,
+          opacity: 0.25,
+          animation: spec.decoration.animated ? `sp-bubble ${9 + (i % 6) * 1.8}s ease-in ${-(i % 7)}s infinite` : undefined,
+        }} />
       ))}
     </div>
   );
@@ -151,19 +167,25 @@ function CloudsDecoration({ palette, spec }: DecorationProps) {
   return (
     <div aria-hidden style={{ position: spec.decoration.fixed_background ? 'fixed' : 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={`cloud-${i}`} style={{
+        <svg key={`cloud-${i}`} viewBox="0 0 180 70" style={{
           position: 'absolute',
-          left: `${-18 + (i * 23) % 120}%`,
+          left: `${-26 + (i * 23) % 132}%`,
           top: `${7 + (i * 13) % 42}%`,
-          width: 110 + (i % 3) * 44,
-          height: 42 + (i % 3) * 12,
-          borderRadius: 999,
-          background: `linear-gradient(135deg, rgba(255,255,255,.74), ${hexA(palette.accent2, 0.18)})`,
-          boxShadow: `28px 4px 0 ${hexA('#ffffff', 0.58)}, 58px 10px 0 ${hexA(palette.accent2, 0.13)}`,
-          filter: 'blur(.2px)',
-          opacity: 0.52,
+          width: 134 + (i % 3) * 54,
+          height: 54 + (i % 3) * 15,
+          opacity: 0.44 + (i % 3) * 0.08,
+          filter: 'drop-shadow(0 16px 22px rgba(87,124,160,.12))',
           animation: spec.decoration.animated ? `sp-cloud ${24 + (i % 4) * 7}s linear ${-(i * 5)}s infinite` : undefined,
-        }} />
+        }}>
+          <path
+            d="M45 55H137C158 55 171 45 171 32C171 20 160 11 145 12C140 5 129 1 117 5C108 -2 91 0 83 11C72 8 60 12 55 22C42 21 31 29 31 40C31 49 37 55 45 55Z"
+            fill="rgba(255,255,255,.78)"
+          />
+          <path
+            d="M51 55H139C153 55 165 49 169 39C156 45 135 47 103 45C77 44 52 47 36 39C36 48 42 55 51 55Z"
+            fill={hexA(palette.accent2, 0.16)}
+          />
+        </svg>
       ))}
       {Array.from({ length: spec.decoration.density === 'lush' ? 10 : 6 }).map((_, i) => (
         <svg key={`bird-${i}`} viewBox="0 0 28 12" style={{
