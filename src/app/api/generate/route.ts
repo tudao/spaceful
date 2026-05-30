@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
 import { pickTemplate } from '@/components/space/templates/types';
+import { DECORATION_IDS, SECTION_IDS } from '@/components/space/engine/types';
 
 const InputSchema = z.object({
   name:   z.string().min(1).max(60),
@@ -12,10 +13,39 @@ const InputSchema = z.object({
   layout: z.enum(['spacious','rich']),
 });
 
+const SpecSchema = z.object({
+  layout: z.object({
+    header_style: z.enum(['botanical','cosmic','minimal','editorial','wave','nature','geometric','aurora']),
+    sections: z.array(z.enum(SECTION_IDS)).min(3).max(7),
+    max_width: z.union([z.literal(860), z.literal(980), z.literal(1100)]),
+    density: z.enum(['spacious','balanced','rich']),
+  }),
+  decoration: z.object({
+    type: z.enum(DECORATION_IDS),
+    density: z.enum(['minimal','medium','lush']),
+    animated: z.boolean(),
+    fixed_background: z.boolean(),
+  }),
+  cards: z.object({
+    style: z.enum(['glass','solid','outlined','paper']),
+    radius: z.union([z.literal(8), z.literal(12), z.literal(16), z.literal(20), z.literal(24)]),
+    shadow: z.enum(['none','soft','medium','dramatic']),
+  }),
+  typography: z.object({
+    title_scale: z.enum(['lg','xl','2xl','display']),
+    weight: z.union([z.literal(700), z.literal(800)]),
+    header_uppercase: z.boolean(),
+  }),
+});
+
 const TokenSchema = z.object({
   mood:             z.string(),
   layout_variant:   z.enum(['spacious','rich']),
   animation_level:  z.enum(['none','subtle','full']),
+  layout:           SpecSchema.shape.layout,
+  decoration:       SpecSchema.shape.decoration,
+  cards:            SpecSchema.shape.cards,
+  typography:       SpecSchema.shape.typography,
   palette: z.object({
     bg: z.string(), bg2: z.string(), surface: z.string(),
     accent: z.string(), accent2: z.string(),
@@ -37,6 +67,22 @@ function fallbackTokens(mood: SpaceMood, layout: 'spacious' | 'rich', vibes: str
     layout_variant: layout,
     animation_level: 'subtle' as const,
     template_id: pickTemplate(mood, vibes),
+    spec_override: {
+      layout: {
+        header_style: mood === 'midnight' ? 'cosmic' : mood === 'forest' ? 'nature' : 'botanical',
+        sections: layout === 'rich' ? ['goals', 'currently', 'focus_hero', 'notepad', 'kanban'] : ['goals', 'currently', 'focus_hero', 'notepad'],
+        max_width: layout === 'spacious' ? 860 : 980,
+        density: layout === 'spacious' ? 'spacious' : 'rich',
+      },
+      decoration: {
+        type: mood === 'midnight' ? 'starfield' : mood === 'ocean' ? 'waves' : mood === 'forest' ? 'forest' : 'botanicals',
+        density: layout === 'rich' ? 'lush' : 'medium',
+        animated: true,
+        fixed_background: true,
+      },
+      cards: { style: 'glass', radius: 20, shadow: 'soft' },
+      typography: { title_scale: layout === 'spacious' ? '2xl' : 'xl', weight: 800, header_uppercase: false },
+    },
     palette: SPACE_PALETTES[mood],
     tagline: 'A quiet corner of the internet, made just for you.',
     hero_title_placeholder: "What's on your mind this week?",
@@ -118,7 +164,12 @@ Colour values must be valid CSS hex (#RRGGBB). glow must be a valid rgba() strin
 
         if (validated.success) {
           // Attach template_id (picked from mood + vibes, not from LLM output)
-          const tokens = { ...validated.data, template_id: pickTemplate(validated.data.mood as SpaceMood, input.vibes) };
+          const { layout, decoration, cards, typography, ...rest } = validated.data;
+          const tokens = {
+            ...rest,
+            template_id: pickTemplate(validated.data.mood as SpaceMood, input.vibes),
+            spec_override: { layout, decoration, cards, typography },
+          };
           emit({ stage: 'done', tokens });
         } else {
           // Retry once with stricter prompt
@@ -139,7 +190,10 @@ Colour values must be valid CSS hex (#RRGGBB). glow must be a valid rgba() strin
             JSON.parse(js >= 0 && je > js ? retryText.slice(js, je + 1) : '{}')
           );
           const retryTokens = retryValidated.success
-            ? { ...retryValidated.data, template_id: pickTemplate(retryValidated.data.mood as SpaceMood, input.vibes) }
+            ? (() => {
+              const { layout, decoration, cards, typography, ...rest } = retryValidated.data;
+              return { ...rest, template_id: pickTemplate(retryValidated.data.mood as SpaceMood, input.vibes), spec_override: { layout, decoration, cards, typography } };
+            })()
             : fallbackTokens(input.mood, input.layout, input.vibes);
           emit({ stage: 'done', tokens: retryTokens });
         }
@@ -177,6 +231,20 @@ Return ONLY this JSON object (no markdown):
   "mood": "${input.mood}",
   "layout_variant": "${input.layout}",
   "animation_level": "subtle",
+  "layout": {
+    "header_style": "<one of botanical, cosmic, minimal, editorial, wave, nature, geometric, aurora>",
+    "sections": ["goals", "currently", "focus_hero", "notepad", "<optional: kanban, streak, quote, reading_list, habit_tracker, photo>"],
+    "max_width": ${input.layout === 'spacious' ? 860 : 980},
+    "density": "${input.layout === 'spacious' ? 'spacious' : 'rich'}"
+  },
+  "decoration": {
+    "type": "<one of ${DECORATION_IDS.join(', ')}>",
+    "density": "<minimal, medium, or lush>",
+    "animated": true,
+    "fixed_background": true
+  },
+  "cards": { "style": "<glass, solid, outlined, or paper>", "radius": 20, "shadow": "<none, soft, medium, or dramatic>" },
+  "typography": { "title_scale": "<lg, xl, 2xl, or display>", "weight": 800, "header_uppercase": false },
   "palette": {
     "bg":      "<main background — should feel like ${input.mood}, vary from base>",
     "bg2":     "<slightly deeper/richer variant of bg>",
@@ -200,5 +268,7 @@ Rules:
 - For light moods: bg should be soft/pastel, surface near-white
 - Make the palette distinctly personal — don't just return the base palette exactly, vary it to match their vibes
 - tagline should reference their goal if provided
+- sections must only use the allowed section ids; include kanban for rich goal-oriented spaces
+- decoration.type must only use the allowed decoration ids; never return HTML, CSS, or JS
 `.trim();
 }

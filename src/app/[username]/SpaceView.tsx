@@ -12,10 +12,8 @@ import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { saveSpaceContent } from './actions';
 import { switchTemplate } from './switchTemplate';
-import { TemplateGarden } from '@/components/space/templates/TemplateGarden';
-import { TemplateCosmos } from '@/components/space/templates/TemplateCosmos';
-import { TemplateJournal } from '@/components/space/templates/TemplateJournal';
-import type { DesignTokens } from '@/components/space/templates/types';
+import { SpecRenderer } from '@/components/space/engine/SpecRenderer';
+import type { EngineTokens, TemplateSpec, TemplateSpecOverride } from '@/components/space/engine/types';
 import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
 
 interface SpaceRow {
@@ -41,6 +39,7 @@ interface Props {
   isOwner?: boolean;
   reactions?: ReactionRow[];
   creditBalance?: number;
+  templateSpec?: TemplateSpec | null;
 }
 
 function timeAgo(dateStr: string) {
@@ -66,12 +65,12 @@ function buildContent(space: SpaceRow): SpaceContent {
     heroTitle:  (cj.hero_title as string) || '',
     heroNotes:  (cj.hero_notes as string) || '',
     notepad:    (cj.notepad    as string) || '',
-    periods:    [],
+    periods:    Array.isArray(cj.periods) ? (cj.periods as SpaceContent['periods']) : [],
     progressPct: 0,
   };
 }
 
-export function SpaceView({ username, isPrivate, space, isOwner = false, reactions = [], creditBalance = 0 }: Props) {
+export function SpaceView({ username, isPrivate, space, isOwner = false, reactions = [], creditBalance = 0, templateSpec = null }: Props) {
   const { toast } = useToast();
   const [mode, setMode] = useState<'editing' | 'preview'>('editing');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -113,12 +112,15 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
   const dtRaw    = (space.design_tokens ?? {}) as Record<string, unknown>;
   const mood     = (dtRaw.mood as SpaceMood) ?? 'lavender';
   const templateId = (dtRaw.template_id as string) ?? 'garden';
+  const [activeTemplateId, setActiveTemplateId] = useState(templateId);
+  const [localContent, setLocalContent] = useState<SpaceContent>(content);
 
-  const tokens: DesignTokens = {
+  const tokens: EngineTokens = {
     mood,
     layout_variant:         ((dtRaw.layout_variant as string) === 'spacious' ? 'spacious' : 'rich'),
     animation_level:        ((dtRaw.animation_level as string) ?? 'subtle') as 'none' | 'subtle' | 'full',
-    template_id:            templateId,
+    template_id:            activeTemplateId,
+    spec_override:          dtRaw.spec_override as TemplateSpecOverride | undefined,
     palette:                (dtRaw.palette as SpacePalette) ?? SPACE_PALETTES[mood],
     tagline:                (dtRaw.tagline as string) ?? '',
     hero_title_placeholder: (dtRaw.hero_title_placeholder as string) ?? '',
@@ -133,9 +135,6 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
     initial: r.message.charAt(0).toUpperCase(),
   }));
 
-  const [localContent, setLocalContent] = useState<SpaceContent>(content);
-  const [activeTemplateId, setActiveTemplateId] = useState(templateId);
-
   async function handleSave(updated: SpaceContent) {
     return saveSpaceContent(space!.id, updated);
   }
@@ -145,20 +144,6 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
     if (creditBalance < 2) { setGateOpen(true); return; }
     setRegenOpen(true);
   }
-
-  const templateProps = {
-    content: localContent,
-    tokens,
-    isOwner,
-    mode,
-    onUpdate: (patch: Partial<SpaceContent>) => setLocalContent(c => ({ ...c, ...patch })),
-    onSave: handleSave,
-  };
-
-  const TemplateComponent =
-    activeTemplateId === 'cosmos'  ? TemplateCosmos  :
-    activeTemplateId === 'journal' ? TemplateJournal :
-    TemplateGarden; // default + 'garden'
 
   return (
     <>
@@ -171,7 +156,15 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
         onOpenSettings={() => setSettingsOpen(true)}
       />}
 
-      <TemplateComponent {...templateProps} />
+      <SpecRenderer
+        content={localContent}
+        tokens={tokens}
+        spec={templateSpec ?? undefined}
+        isOwner={isOwner}
+        mode={mode}
+        onUpdate={(patch) => setLocalContent(c => ({ ...c, ...patch }))}
+        onSave={handleSave}
+      />
 
       {!isOwner && space.reactions_enabled && (
         <ReactionForm username={username} spaceId={space.id} />

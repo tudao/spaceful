@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Users, Globe, ShieldAlert, Flag,
+  LayoutDashboard, Users, Globe, ShieldAlert, Flag, LayoutTemplate,
   Gem, Bot, Image, Settings, ExternalLink,
 } from 'lucide-react';
 
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: 'Dashboard',  href: '/admin',             icon: LayoutDashboard },
   { label: 'Users',      href: '/admin/users',        icon: Users },
   { label: 'Spaces',     href: '/admin/spaces',       icon: Globe },
+  { label: 'Templates',  href: '/admin/templates',    icon: LayoutTemplate },
   { label: 'Moderation', href: '/admin/moderation',   icon: ShieldAlert },
   { label: 'Reports',    href: '/admin/reports',      icon: Flag },
   { label: 'Credits',    href: '/admin/credits',      icon: Gem },

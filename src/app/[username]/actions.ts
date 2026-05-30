@@ -26,6 +26,7 @@ export async function saveSpaceContent(spaceId: string, content: SpaceContent) {
     hero_notes:  content.heroNotes   ?? '',
     notepad:     content.notepad     ?? '',
     goals: content.goals.map(g => ({ id: g.id, text: g.text, done: g.done })),
+    periods: (content.periods ?? []).map(p => ({ week: p.week, title: p.title, notes: p.notes, status: p.status })),
   };
 
   const { error } = await (supabase as any)

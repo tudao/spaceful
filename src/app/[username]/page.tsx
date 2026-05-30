@@ -2,6 +2,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { SpaceView } from './SpaceView';
+import type { TemplateSpec } from '@/components/space/engine/types';
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -68,6 +69,17 @@ export default async function UserSpacePage({ params }: Props) {
 
   if (!isOwner) rxQuery.eq('is_visible', true);
   const { data: reactions } = await rxQuery as { data: { id: string; message: string; created_at: string }[] | null };
+  const templateId = (space.design_tokens as Record<string, unknown> | null)?.template_id as string | undefined;
+  let templateSpec: TemplateSpec | null = null;
+  if (templateId) {
+    const { data: template } = await (supabase as any)
+      .from('space_templates')
+      .select('spec')
+      .eq('slug', templateId)
+      .eq('is_active', true)
+      .maybeSingle() as { data: { spec: TemplateSpec } | null };
+    templateSpec = template?.spec ?? null;
+  }
 
   return (
     <SpaceView
@@ -76,6 +88,7 @@ export default async function UserSpacePage({ params }: Props) {
       isOwner={isOwner}
       reactions={reactions ?? []}
       creditBalance={isOwner ? profile.credit_balance : 0}
+      templateSpec={templateSpec}
     />
   );
 }

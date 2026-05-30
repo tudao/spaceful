@@ -4,6 +4,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
+import type { TemplateSpecOverride } from '@/components/space/engine/types';
 
 interface GeneratedTokens {
   mood?: SpaceMood;
@@ -15,6 +16,7 @@ interface GeneratedTokens {
   hero_title_placeholder?: string;
   notepad_starter?: string;
   currently_placeholder?: string;
+  spec_override?: TemplateSpecOverride;
 }
 
 interface PublishSpaceInput {
@@ -48,6 +50,7 @@ export async function publishSpace(input: PublishSpaceInput) {
     layout_variant:  gt?.layout_variant ?? input.layout,
     animation_level: gt?.animation_level ?? 'subtle',
     template_id:     gt?.template_id ?? 'garden',
+    spec_override:   gt?.spec_override,
     tagline:                  gt?.tagline ?? '',
     hero_title_placeholder:   gt?.hero_title_placeholder ?? '',
     currently_placeholder:    gt?.currently_placeholder  ?? '',
