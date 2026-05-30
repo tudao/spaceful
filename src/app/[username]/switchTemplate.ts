@@ -2,6 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from '@/lib/supabase/server';
+import type { TemplateSpec } from '@/components/space/engine/types';
 
 export async function switchTemplate(spaceId: string, templateId: string) {
   const supabase = await createClient();
@@ -17,7 +18,8 @@ export async function switchTemplate(spaceId: string, templateId: string) {
 
   if (!space || space.user_id !== user.id) return { error: 'forbidden' };
 
-  const updated = { ...(space.design_tokens ?? {}), template_id: templateId };
+  const { spec_override: _specOverride, ...restTokens } = space.design_tokens ?? {};
+  const updated = { ...restTokens, template_id: templateId };
 
   const { error } = await (supabase as any)
     .from('spaces')
@@ -25,5 +27,13 @@ export async function switchTemplate(spaceId: string, templateId: string) {
     .eq('id', spaceId);
 
   if (error) return { error: (error as any).message };
-  return { ok: true };
+
+  const { data: template } = await (supabase as any)
+    .from('space_templates')
+    .select('spec')
+    .eq('slug', templateId)
+    .eq('is_active', true)
+    .maybeSingle() as { data: { spec: TemplateSpec } | null };
+
+  return { ok: true, templateSpec: template?.spec ?? null };
 }

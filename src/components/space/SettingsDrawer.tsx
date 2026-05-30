@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Lock, Link, Globe, Sparkles, Trash2, Check } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { useToast } from '@/components/ui/Toast';
-import { TEMPLATES } from '@/components/space/templates/types';
+import { TEMPLATES } from '@/components/space/engine/templateCatalog';
 
 type Visibility = 'private' | 'link_only' | 'public';
 

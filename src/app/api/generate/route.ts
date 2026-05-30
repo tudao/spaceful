@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
-import { pickTemplate } from '@/components/space/templates/types';
+import { pickTemplate } from '@/components/space/engine/templateCatalog';
 import { DECORATION_IDS, SECTION_IDS } from '@/components/space/engine/types';
 
 const InputSchema = z.object({

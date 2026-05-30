@@ -1,34 +1,10 @@
-import type { SpaceContent, SpacePalette } from '../SpacePage';
 import type { SpaceMood } from '@/lib/utils';
-
-export interface DesignTokens {
-  mood: SpaceMood;
-  layout_variant: 'spacious' | 'rich';
-  animation_level: 'none' | 'subtle' | 'full';
-  template_id?: string;
-  palette: SpacePalette;
-  tagline?: string;
-  hero_title_placeholder?: string;
-  notepad_starter?: string;
-  currently_placeholder?: string;
-}
-
-export interface TemplateProps {
-  content: SpaceContent;
-  tokens: DesignTokens;
-  isOwner: boolean;
-  mode: 'editing' | 'preview';
-  onUpdate: (patch: Partial<SpaceContent>) => void;
-  onSave: (c: SpaceContent) => Promise<unknown>;
-}
 
 export interface TemplateDefinition {
   id: string;
   name: string;
   description: string;
-  /** Which moods this template looks best with */
   moodAffinity: SpaceMood[];
-  /** Which vibes lean toward this template */
   vibeKeywords: string[];
 }
 
@@ -63,15 +39,15 @@ export const TEMPLATES: TemplateDefinition[] = [
   },
 ];
 
-/** Pick the best template for this mood + vibes combination */
 export function pickTemplate(mood: SpaceMood, vibes: string[]): string {
   const scores: Record<string, number> = {};
-  for (const t of TEMPLATES) {
-    scores[t.id] = 0;
-    if (t.moodAffinity.includes(mood)) scores[t.id] += 3;
-    for (const v of vibes) {
-      if (t.vibeKeywords.includes(v.toLowerCase())) scores[t.id] += 2;
+  for (const template of TEMPLATES) {
+    scores[template.id] = 0;
+    if (template.moodAffinity.includes(mood)) scores[template.id] += 3;
+    for (const vibe of vibes) {
+      if (template.vibeKeywords.includes(vibe.toLowerCase())) scores[template.id] += 2;
     }
   }
   return Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'garden';
 }
+

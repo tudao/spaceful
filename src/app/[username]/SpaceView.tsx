@@ -117,6 +117,8 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
   const mood     = (dtRaw.mood as SpaceMood) ?? 'lavender';
   const templateId = (dtRaw.template_id as string) ?? 'garden';
   const [activeTemplateId, setActiveTemplateId] = useState(templateId);
+  const [activeTemplateSpec, setActiveTemplateSpec] = useState<TemplateSpec | null>(templateSpec);
+  const [activeSpecOverride, setActiveSpecOverride] = useState<TemplateSpecOverride | undefined>(dtRaw.spec_override as TemplateSpecOverride | undefined);
   const [localContent, setLocalContent] = useState<SpaceContent>(content);
 
   const tokens: EngineTokens = {
@@ -124,7 +126,7 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
     layout_variant:         ((dtRaw.layout_variant as string) === 'spacious' ? 'spacious' : 'rich'),
     animation_level:        ((dtRaw.animation_level as string) ?? 'subtle') as 'none' | 'subtle' | 'full',
     template_id:            activeTemplateId,
-    spec_override:          dtRaw.spec_override as TemplateSpecOverride | undefined,
+    spec_override:          activeSpecOverride,
     palette:                (dtRaw.palette as SpacePalette) ?? SPACE_PALETTES[mood],
     tagline:                (dtRaw.tagline as string) ?? '',
     hero_title_placeholder: (dtRaw.hero_title_placeholder as string) ?? '',
@@ -163,7 +165,7 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
       <SpecRenderer
         content={localContent}
         tokens={tokens}
-        spec={templateSpec ?? undefined}
+        spec={activeTemplateSpec ?? undefined}
         isOwner={isOwner}
         mode={mode}
         onUpdate={(patch) => setLocalContent(c => ({ ...c, ...patch }))}
@@ -188,7 +190,11 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
           onDelete={() => { setSettingsOpen(false); setDeleteOpen(true); }}
           onSwitchTemplate={async (id) => {
             setActiveTemplateId(id);
-            await switchTemplate(space!.id, id);
+            setActiveSpecOverride(undefined);
+            const result = await switchTemplate(space!.id, id);
+            if (result && 'templateSpec' in result) {
+              setActiveTemplateSpec(result.templateSpec ?? null);
+            }
           }}
         />
       )}
