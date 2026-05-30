@@ -1,4 +1,8 @@
-import { Check, PenLine } from 'lucide-react';
+'use client';
+
+import { useState } from 'react';
+import type { CSSProperties } from 'react';
+import { BookOpen, Check, ChevronLeft, ChevronRight, Image as ImageIcon, PenLine, Quote } from 'lucide-react';
 import type { SectionId, SectionProps } from '../types';
 
 function GoalsSection({ content, editing, toggleGoal, updateGoalText, addGoal, styles }: SectionProps) {
@@ -78,58 +82,133 @@ function FocusHeroSection({ content, tokens, editing, onUpdate, styles }: Sectio
 }
 
 function NotepadSection({ content, tokens, editing, onUpdate, styles }: SectionProps) {
+  const [tab, setTab] = useState<'free' | 'checklist' | 'bullets'>('free');
+  const bullets = (content.notepad || '').split('\n').filter(Boolean).slice(0, 6);
   return (
     <section style={{ ...styles.card, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '13px 18px', borderBottom: `1px solid ${styles.border}` }}>
         <span style={{ ...styles.label, margin: 0, display: 'inline-flex', alignItems: 'center', gap: 7 }}><PenLine size={14} /> Notepad</span>
-        <span style={{ fontSize: 12, color: styles.muted, fontWeight: 700 }}>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+        <div style={{ display: 'inline-flex', gap: 2, padding: 3, borderRadius: 999, background: 'var(--sp-chip-bg)', border: `1px solid ${styles.border}` }}>
+          {(['free', 'checklist', 'bullets'] as const).map(nextTab => (
+            <button key={nextTab} type="button" onClick={() => setTab(nextTab)} style={{ border: 0, borderRadius: 999, padding: '5px 10px', background: tab === nextTab ? 'var(--sp-accent)' : 'transparent', color: tab === nextTab ? '#fff' : 'var(--sp-text2)', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+              {nextTab}
+            </button>
+          ))}
+        </div>
       </div>
-      <div
-        contentEditable={editing || undefined}
-        suppressContentEditableWarning
-        onBlur={e => onUpdate({ notepad: e.currentTarget.innerText.trim() })}
-        style={{ padding: '16px 18px', fontSize: 14, lineHeight: 1.9, color: 'var(--sp-text2)', minHeight: 126, outline: 'none' }}
-      >
-        {content.notepad || (editing ? tokens.notepad_starter || 'Write something...' : '')}
-      </div>
+      {tab === 'free' && (
+        <div
+          contentEditable={editing || undefined}
+          suppressContentEditableWarning
+          onBlur={e => onUpdate({ notepad: e.currentTarget.innerText.trim() })}
+          style={{ padding: '16px 18px', fontSize: 14, lineHeight: 1.9, color: 'var(--sp-text2)', minHeight: 154, outline: 'none' }}
+        >
+          {content.notepad || (editing ? tokens.notepad_starter || 'Write something...' : '')}
+        </div>
+      )}
+      {tab === 'checklist' && (
+        <div style={{ padding: '12px 18px 16px', minHeight: 154 }}>
+          {content.goals.slice(0, 5).map(goal => (
+            <div key={goal.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${styles.border}` }}>
+              <span style={{ width: 17, height: 17, borderRadius: 5, border: `1.5px solid ${goal.done ? 'var(--sp-accent)' : styles.border}`, background: goal.done ? 'var(--sp-accent)' : 'transparent', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{goal.done && <Check size={11} color="#fff" />}</span>
+              <span style={{ color: 'var(--sp-text2)', fontSize: 13, lineHeight: 1.5 }}>{goal.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {tab === 'bullets' && (
+        <div style={{ padding: '14px 18px 16px', minHeight: 154 }}>
+          {(bullets.length ? bullets : ['Capture an idea', 'Name the next action', 'Keep one useful note']).map((bullet, index) => (
+            <div key={`${bullet}-${index}`} style={{ display: 'flex', gap: 10, padding: '8px 0', color: 'var(--sp-text2)', fontSize: 13, lineHeight: 1.6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--sp-accent2)', marginTop: 8, flexShrink: 0 }} />
+              {bullet}
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
 
 function KanbanSection({ content, editing, onUpdate, styles }: SectionProps) {
+  const [page, setPage] = useState(0);
   const periods = content.periods?.length ? content.periods : [
     { week: 'W1', title: content.heroTitle || 'Plan the next move', notes: content.heroNotes || 'Set a direction and keep it visible.', status: 'prog' as const },
     { week: 'W2', title: 'Build momentum', notes: 'Protect the main habit.', status: 'plan' as const },
-    { week: 'W3', title: 'Review and adjust', notes: 'Keep what works, remove the rest.', status: 'plan' as const },
+    { week: 'W3', title: 'Review and adjust', notes: 'Keep what works, remove the rest.', status: 'blocked' as const },
+    { week: 'W4', title: 'Launch the next version', notes: 'Show the work and collect feedback.', status: 'done' as const },
   ];
-  const label = { done: 'Done', prog: 'In progress', plan: 'Planned' } as const;
+  const label = { done: 'Done', prog: 'In progress', plan: 'Planned', blocked: 'Blocked' } as const;
+  const statuses = ['plan', 'prog', 'blocked', 'done'] as const;
+  const visible = periods.slice(page, page + 3);
   return (
     <section>
-      <div style={styles.label}>The season so far</div>
-      <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 4, scrollSnapType: 'x mandatory' }}>
-        {periods.map((period, index) => (
-          <article key={`${period.week}-${index}`} style={{ ...styles.card, minWidth: 220, padding: 18, scrollSnapAlign: 'start' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+        <div style={{ ...styles.label, margin: 0 }}>The season so far</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button type="button" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))} style={navButtonStyle(page === 0)}><ChevronLeft size={15} /></button>
+          <button type="button" disabled={page >= Math.max(0, periods.length - 3)} onClick={() => setPage(p => Math.min(Math.max(0, periods.length - 3), p + 1))} style={navButtonStyle(page >= Math.max(0, periods.length - 3))}><ChevronRight size={15} /></button>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14 }}>
+        {visible.map((period, index) => {
+          const realIndex = page + index;
+          return (
+          <article key={`${period.week}-${realIndex}`} style={{ ...styles.card, overflow: 'hidden' }}>
+            <div style={{ height: 4, background: statusGradient(period.status) }} />
+            <div style={{ padding: 18 }}>
             <div style={{ fontSize: 11, fontWeight: 900, color: styles.muted, marginBottom: 10 }}>{period.week}</div>
-            <div contentEditable={editing || undefined} suppressContentEditableWarning style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.3, color: 'var(--sp-text)', outline: 'none' }}>{period.title}</div>
-            <p contentEditable={editing || undefined} suppressContentEditableWarning style={{ minHeight: 44, fontSize: 13, lineHeight: 1.6, color: 'var(--sp-text2)', outline: 'none' }}>{period.notes}</p>
+            <div
+              contentEditable={editing || undefined}
+              suppressContentEditableWarning
+              onBlur={e => onUpdate({ periods: periods.map((p, i) => i === realIndex ? { ...p, title: e.currentTarget.innerText.trim() } : p) })}
+              style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.35, color: 'var(--sp-text)', outline: 'none' }}
+            >
+              {period.title}
+            </div>
+            <p
+              contentEditable={editing || undefined}
+              suppressContentEditableWarning
+              onBlur={e => onUpdate({ periods: periods.map((p, i) => i === realIndex ? { ...p, notes: e.currentTarget.innerText.trim() } : p) })}
+              style={{ minHeight: 58, fontSize: 13, lineHeight: 1.65, color: 'var(--sp-text2)', outline: 'none', margin: '8px 0 14px' }}
+            >
+              {period.notes}
+            </p>
             <button
               type="button"
               disabled={!editing}
               onClick={() => {
-                const statuses = ['plan', 'prog', 'done'] as const;
                 const current = statuses.indexOf(period.status);
-                const nextPeriods = periods.map((p, i) => i === index ? { ...p, status: statuses[(current + 1) % statuses.length] } : p);
+                const nextPeriods = periods.map((p, i) => i === realIndex ? { ...p, status: statuses[(current + 1) % statuses.length] } : p);
                 onUpdate({ periods: nextPeriods });
               }}
-              style={{ border: 0, borderRadius: 999, padding: '6px 10px', background: 'var(--sp-done-bg)', color: 'var(--sp-accent)', fontSize: 12, fontWeight: 800, cursor: editing ? 'pointer' : 'default' }}
+              style={{ border: `1px solid ${styles.border}`, borderRadius: 999, padding: '6px 11px', background: statusBg(period.status), color: statusColor(period.status), fontSize: 12, fontWeight: 800, cursor: editing ? 'pointer' : 'default' }}
             >
+              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: statusColor(period.status), marginRight: 7 }} />
               {label[period.status]}
             </button>
+            </div>
           </article>
-        ))}
+        );})}
       </div>
     </section>
   );
+}
+
+function navButtonStyle(disabled: boolean): CSSProperties {
+  return { width: 34, height: 34, borderRadius: 999, border: '1px solid var(--sp-border)', background: 'var(--sp-chip-bg)', color: 'var(--sp-text2)', display: 'grid', placeItems: 'center', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.35 : 1 };
+}
+
+function statusColor(status: 'done' | 'prog' | 'plan' | 'blocked') {
+  return status === 'done' ? '#3D7A58' : status === 'prog' ? 'var(--sp-accent)' : status === 'blocked' ? '#B4533F' : 'var(--sp-text2)';
+}
+
+function statusBg(status: 'done' | 'prog' | 'plan' | 'blocked') {
+  return status === 'done' ? 'rgba(91,171,124,0.16)' : status === 'prog' ? 'var(--sp-done-bg)' : status === 'blocked' ? 'rgba(244,168,154,0.18)' : 'var(--sp-chip-bg)';
+}
+
+function statusGradient(status: 'done' | 'prog' | 'plan' | 'blocked') {
+  return status === 'done' ? 'linear-gradient(90deg,#A8C5A0,#5BAB7C)' : status === 'prog' ? 'linear-gradient(90deg,var(--sp-accent2),var(--sp-accent))' : status === 'blocked' ? 'linear-gradient(90deg,#F9D6B0,#F4A89A)' : 'linear-gradient(90deg,rgba(255,255,255,.2),var(--sp-border))';
 }
 
 function StreakSection({ content, styles }: SectionProps) {
@@ -141,6 +220,77 @@ function StreakSection({ content, styles }: SectionProps) {
         <strong style={{ fontSize: 42, lineHeight: 1, color: 'var(--sp-text)' }}>{Math.max(complete, 1)}</strong>
         <span style={{ color: 'var(--sp-text2)', fontWeight: 800, paddingBottom: 5 }}>focused day{complete === 1 ? '' : 's'}</span>
       </div>
+    </section>
+  );
+}
+
+function HabitSection({ content, editing, onUpdate, styles }: SectionProps) {
+  const habits = content.habits?.length ? content.habits : [
+    { id: 'h1', label: 'Deep work', days: [true, true, false, true, false, true, false] },
+    { id: 'h2', label: 'Journal', days: [false, true, true, true, false, false, true] },
+    { id: 'h3', label: 'Move', days: [true, false, true, false, true, true, false] },
+  ];
+  return (
+    <section style={{ ...styles.card, padding: 20 }}>
+      <div style={styles.label}>Habit tracker</div>
+      <div style={{ display: 'grid', gap: 11 }}>
+        {habits.map((habit, habitIndex) => (
+          <div key={habit.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) repeat(7, 18px)', gap: 8, alignItems: 'center' }}>
+            <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ habits: habits.map((h, i) => i === habitIndex ? { ...h, label: e.currentTarget.innerText.trim() } : h) })} style={{ fontSize: 13, fontWeight: 800, color: 'var(--sp-text2)', outline: 'none' }}>{habit.label}</div>
+            {habit.days.slice(0, 7).map((done, dayIndex) => (
+              <button key={dayIndex} type="button" disabled={!editing} onClick={() => onUpdate({ habits: habits.map((h, i) => i === habitIndex ? { ...h, days: h.days.map((d, di) => di === dayIndex ? !d : d) } : h) })} style={{ width: 18, height: 18, borderRadius: 5, border: `1px solid ${done ? 'var(--sp-accent)' : styles.border}`, background: done ? 'var(--sp-accent)' : 'var(--sp-chip-bg)', cursor: editing ? 'pointer' : 'default' }} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ReadingListSection({ content, editing, onUpdate, styles }: SectionProps) {
+  const items = content.readingList?.length ? content.readingList : [
+    { id: 'r1', title: 'The current obsession', meta: 'Article / reference', status: 'reading' as const },
+    { id: 'r2', title: 'Design notes', meta: 'Queued for later', status: 'queued' as const },
+    { id: 'r3', title: 'Launch checklist', meta: 'Done', status: 'done' as const },
+  ];
+  return (
+    <section style={{ ...styles.card, padding: 20 }}>
+      <div style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: 7 }}><BookOpen size={14} /> Reading list</div>
+      <div style={{ display: 'grid', gap: 10 }}>
+        {items.map((item, index) => (
+          <article key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'var(--sp-chip-bg)', border: `1px solid ${styles.border}` }}>
+            <div style={{ width: 36, height: 48, borderRadius: 6, background: `linear-gradient(135deg,var(--sp-accent2),var(--sp-accent))`, flexShrink: 0 }} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ readingList: items.map((r, i) => i === index ? { ...r, title: e.currentTarget.innerText.trim() } : r) })} style={{ fontSize: 14, fontWeight: 900, color: 'var(--sp-text)', outline: 'none' }}>{item.title}</div>
+              <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ readingList: items.map((r, i) => i === index ? { ...r, meta: e.currentTarget.innerText.trim() } : r) })} style={{ fontSize: 12, color: styles.muted, marginTop: 3, outline: 'none' }}>{item.meta}</div>
+            </div>
+            <span style={{ borderRadius: 999, padding: '5px 9px', background: item.status === 'reading' ? 'var(--sp-done-bg)' : 'transparent', border: `1px solid ${styles.border}`, color: item.status === 'reading' ? 'var(--sp-accent)' : styles.muted, fontSize: 11, fontWeight: 900 }}>{item.status}</span>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function QuoteSection({ content, editing, onUpdate, styles }: SectionProps) {
+  const quote = content.quote ?? { text: 'Make the next small thing beautiful enough to keep going.', attribution: 'Spaceful' };
+  return (
+    <section style={{ ...styles.card, padding: 22, position: 'relative', overflow: 'hidden' }}>
+      <Quote size={52} style={{ position: 'absolute', right: 18, top: 14, color: 'var(--sp-accent)', opacity: 0.12 }} />
+      <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ quote: { ...quote, text: e.currentTarget.innerText.trim() } })} style={{ fontSize: 22, lineHeight: 1.45, fontWeight: 800, color: 'var(--sp-text)', outline: 'none', maxWidth: 680 }}>{quote.text}</div>
+      <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ quote: { ...quote, attribution: e.currentTarget.innerText.trim() } })} style={{ color: styles.muted, fontSize: 13, fontWeight: 800, marginTop: 12, outline: 'none' }}>{quote.attribution}</div>
+    </section>
+  );
+}
+
+function PhotoSection({ content, editing, onUpdate, styles }: SectionProps) {
+  const photo = content.photo ?? { url: '', caption: 'A visual anchor for this season.' };
+  return (
+    <section style={{ ...styles.card, overflow: 'hidden' }}>
+      <div style={{ minHeight: 220, display: 'grid', placeItems: 'center', background: photo.url ? `linear-gradient(rgba(0,0,0,.08),rgba(0,0,0,.08)), url(${photo.url}) center/cover` : 'linear-gradient(135deg,var(--sp-chip-bg),var(--sp-done-bg))', color: 'var(--sp-accent)' }}>
+        {!photo.url && <ImageIcon size={42} />}
+      </div>
+      <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ photo: { ...photo, caption: e.currentTarget.innerText.trim() } })} style={{ padding: '13px 16px', color: 'var(--sp-text2)', fontSize: 13, fontWeight: 800, outline: 'none' }}>{photo.caption}</div>
     </section>
   );
 }
@@ -159,9 +309,9 @@ export const SECTIONS: Record<SectionId, React.ComponentType<SectionProps>> = {
   focus_hero: FocusHeroSection,
   notepad: NotepadSection,
   kanban: KanbanSection,
-  reading_list: PlaceholderSection,
-  habit_tracker: StreakSection,
+  reading_list: ReadingListSection,
+  habit_tracker: HabitSection,
   streak: StreakSection,
-  quote: PlaceholderSection,
-  photo: PlaceholderSection,
+  quote: QuoteSection,
+  photo: PhotoSection,
 };

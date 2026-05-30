@@ -48,6 +48,13 @@ export const TEMPLATES: TemplateDefinition[] = [
     vibeKeywords: ['bold', 'focused', 'minimal', 'energetic'],
   },
   {
+    id: 'laki-world',
+    name: "Laki's World",
+    description: 'Dense personal dashboard with carousel goals, tabbed notes, habits, and media',
+    moodAffinity: ['lavender', 'rose', 'ocean'],
+    vibeKeywords: ['playful', 'creative', 'focused', 'dreamy', 'energetic'],
+  },
+  {
     id: 'journal',
     name: 'Journal',
     description: 'Warm editorial with big title energy and ruled notepad',

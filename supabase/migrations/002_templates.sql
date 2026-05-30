@@ -53,6 +53,17 @@ values
     true
   ),
   (
+    'laki-world',
+    'Laki''s World',
+    'Dense personal dashboard with carousel goals, tabbed notes, habits, and media',
+    '{"version":1,"layout":{"header_style":"botanical","sections":["goals","currently","focus_hero","notepad","kanban","habit_tracker","reading_list","photo"],"max_width":1100,"density":"rich"},"decoration":{"type":"botanicals","density":"lush","animated":true,"fixed_background":true},"cards":{"style":"glass","radius":20,"shadow":"medium"},"typography":{"title_scale":"xl","weight":800,"header_uppercase":false}}',
+    'lavender',
+    array['dashboard','botanical','featured'],
+    array['lavender','rose','ocean'],
+    array['playful','creative','focused','dreamy','energetic'],
+    true
+  ),
+  (
     'cosmos',
     'Cosmos',
     'Dark starfield with glowing orbs and editorial typography',
@@ -83,4 +94,3 @@ on conflict (slug) do update set
   mood_affinity = excluded.mood_affinity,
   vibe_keywords = excluded.vibe_keywords,
   is_featured = excluded.is_featured;
-

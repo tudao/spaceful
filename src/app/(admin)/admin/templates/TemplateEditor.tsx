@@ -42,8 +42,21 @@ const PREVIEW_CONTENT: SpaceContent = {
   periods: [
     { week: 'W1', title: 'Core renderer', notes: 'Specs, registries, and content editing.', status: 'done' },
     { week: 'W2', title: 'Admin flow', notes: 'Create and preview templates.', status: 'prog' },
-    { week: 'W3', title: 'Catalog', notes: 'Let users choose a base world.', status: 'plan' },
+    { week: 'W3', title: 'Catalog', notes: 'Let users choose a base world.', status: 'blocked' },
+    { week: 'W4', title: 'Launch polish', notes: 'Tighten the dashboard details.', status: 'plan' },
   ],
+  habits: [
+    { id: 'h1', label: 'Deep work', days: [true, true, false, true, true, false, true] },
+    { id: 'h2', label: 'Journal', days: [false, true, true, false, true, true, false] },
+    { id: 'h3', label: 'Ship', days: [true, false, true, true, false, true, true] },
+  ],
+  readingList: [
+    { id: 'r1', title: 'Template systems notes', meta: 'Currently reading', status: 'reading' },
+    { id: 'r2', title: 'Personal dashboard patterns', meta: 'Queued', status: 'queued' },
+    { id: 'r3', title: 'Launch checklist', meta: 'Done', status: 'done' },
+  ],
+  quote: { text: 'Make the next small thing beautiful enough to keep going.', attribution: 'Laki' },
+  photo: { url: '', caption: 'A visual anchor for this season.' },
 };
 
 function draftTemplate(): TemplateRow {

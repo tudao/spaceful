@@ -16,7 +16,11 @@ export interface SpaceContent {
   heroTitle?: string;
   heroNotes?: string;
   notepad?: string;
-  periods?: { week: string; title: string; notes: string; status: 'done' | 'prog' | 'plan' }[];
+  periods?: { week: string; title: string; notes: string; status: 'done' | 'prog' | 'plan' | 'blocked' }[];
+  habits?: { id: string; label: string; days: boolean[] }[];
+  readingList?: { id: string; title: string; meta?: string; status?: 'reading' | 'queued' | 'done' }[];
+  quote?: { text: string; attribution?: string };
+  photo?: { url: string; caption?: string };
   progressPct?: number;
 }
 
@@ -150,8 +154,8 @@ export function SpacePage({
   }
 
   const creditClass = creditBalance === 0 ? 'zero' : creditBalance < 5 ? 'low' : '';
-  const periodLabel = { done: 'Done', prog: 'In progress', plan: 'Planned' } as const;
-  const periodCls   = { done: 'done', prog: 'prog', plan: 'plan' } as const;
+  const periodLabel = { done: 'Done', prog: 'In progress', plan: 'Planned', blocked: 'Blocked' } as const;
+  const periodCls   = { done: 'done', prog: 'prog', plan: 'plan', blocked: 'plan' } as const;
 
   const donePct = content.goals.length
     ? Math.round((content.goals.filter(g => g.done).length / content.goals.length) * 100)

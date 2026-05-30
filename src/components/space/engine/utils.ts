@@ -33,6 +33,13 @@ export const BASE_TEMPLATE_SPECS: Record<string, TemplateSpec> = {
     cards: { style: 'glass', radius: 20, shadow: 'soft' },
     typography: { title_scale: 'xl', weight: 800, header_uppercase: false },
   },
+  'laki-world': {
+    version: 1,
+    layout: { header_style: 'botanical', sections: ['goals', 'currently', 'focus_hero', 'notepad', 'kanban', 'habit_tracker', 'reading_list', 'photo'], max_width: 1100, density: 'rich' },
+    decoration: { type: 'botanicals', density: 'lush', animated: true, fixed_background: true },
+    cards: { style: 'glass', radius: 20, shadow: 'medium' },
+    typography: { title_scale: 'xl', weight: 800, header_uppercase: false },
+  },
   cosmos: {
     version: 1,
     layout: { header_style: 'cosmic', sections: ['goals', 'currently', 'focus_hero', 'notepad', 'streak'], max_width: 980, density: 'balanced' },
@@ -56,4 +63,3 @@ export function resolveSpec(templateId?: string, override?: TemplateSpecOverride
 export function paletteFor(mood: SpaceMood, palette?: SpacePalette): SpacePalette {
   return palette ?? SPACE_PALETTES[mood];
 }
-

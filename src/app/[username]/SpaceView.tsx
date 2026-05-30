@@ -66,6 +66,10 @@ function buildContent(space: SpaceRow): SpaceContent {
     heroNotes:  (cj.hero_notes as string) || '',
     notepad:    (cj.notepad    as string) || '',
     periods:    Array.isArray(cj.periods) ? (cj.periods as SpaceContent['periods']) : [],
+    habits:     Array.isArray(cj.habits) ? (cj.habits as SpaceContent['habits']) : [],
+    readingList: Array.isArray(cj.reading_list) ? (cj.reading_list as SpaceContent['readingList']) : [],
+    quote:      typeof cj.quote === 'object' && cj.quote ? (cj.quote as SpaceContent['quote']) : undefined,
+    photo:      typeof cj.photo === 'object' && cj.photo ? (cj.photo as SpaceContent['photo']) : undefined,
     progressPct: 0,
   };
 }
