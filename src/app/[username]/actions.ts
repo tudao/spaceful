@@ -41,3 +41,18 @@ export async function saveSpaceContent(spaceId: string, content: SpaceContent) {
   if (error) return { error: (error as any).message };
   return { ok: true };
 }
+
+export async function saveCompanionArchetype(spaceId: string, archetype: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'unauthenticated' };
+
+  const { error } = await (supabase as any)
+    .from('spaces')
+    .update({ companion_archetype: archetype })
+    .eq('id', spaceId)
+    .eq('user_id', user.id);
+
+  if (error) return { error: (error as any).message };
+  return { ok: true };
+}

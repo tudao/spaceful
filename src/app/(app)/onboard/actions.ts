@@ -25,6 +25,7 @@ interface PublishSpaceInput {
   goal: string;
   mood: SpaceMood;
   layout: 'spacious' | 'rich';
+  archetype?: string;
   generatedTokens?: GeneratedTokens;
 }
 
@@ -106,6 +107,7 @@ export async function publishSpace(input: PublishSpaceInput) {
     design_tokens, content_json,
     visibility: 'link_only', gallery_status: 'not_submitted',
     is_primary: isPrimary, published_at: new Date().toISOString(),
+    companion_archetype: input.archetype ?? 'sage',
   };
 
   const { data: space, error: spaceError } = await (supabase as any)

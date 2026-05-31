@@ -14,6 +14,14 @@ import { publishSpace } from './actions';
 const VIBES = ['calm','creative','focused','cozy','bold','playful','minimal','dreamy','grounded','energetic'];
 const MOODS = Object.keys(SPACE_PALETTES) as SpaceMood[];
 
+const ARCHETYPES = [
+  { id: 'sage',       label: 'The Sage',        desc: 'Wise questions, deep reflection' },
+  { id: 'coach',      label: 'The Coach',        desc: 'Warm energy, action-focused' },
+  { id: 'stoic',      label: 'The Stoic',        desc: 'Calm clarity, practical wisdom' },
+  { id: 'poet',       label: 'The Poet',         desc: 'Beauty, metaphor, meaning' },
+  { id: 'challenger', label: 'The Challenger',   desc: 'Bold pushes, growth mindset' },
+];
+
 const GEN_STEPS = [
   'Choosing your palette',
   'Setting the atmosphere',
@@ -30,6 +38,7 @@ interface State {
   mood: SpaceMood;
   layout: 'spacious' | 'rich';
   templateId: string; // '' = let AI surprise
+  archetype: string;
 }
 
 // Shape returned by /api/generate when stage === 'done'
@@ -51,7 +60,7 @@ export default function OnboardPage() {
 
   const [step, setStep]   = useState(0);
   const [phase, setPhase] = useState<Phase>('steps');
-  const [state, setState] = useState<State>({ name: '', vibes: [], goal: '', mood: 'lavender', layout: 'rich', templateId: '' });
+  const [state, setState] = useState<State>({ name: '', vibes: [], goal: '', mood: 'lavender', layout: 'rich', templateId: '', archetype: 'sage' });
   const [publishError, setPublishError] = useState('');
   const [isPending, startTransition] = useTransition();
 
@@ -371,6 +380,22 @@ export default function OnboardPage() {
                       style={{ padding: '5px 14px', borderRadius: 99, border: `1.5px solid ${state.layout === key ? 'var(--app-accent)' : 'var(--app-border-strong)'}`, background: state.layout === key ? 'rgba(255,255,255,0.85)' : 'transparent', fontWeight: 700, fontSize: 13, cursor: 'pointer', color: state.layout === key ? 'var(--app-accent-ink)' : 'var(--app-text-2)', transition: 'var(--t-fast)' }}
                     >{key === 'spacious' ? 'Spacious' : 'Rich'}</button>
                   ))}
+                </div>
+
+                {/* Companion archetype */}
+                <div style={{ marginTop: 24 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--app-text-2)', textAlign: 'center', marginBottom: 12, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Your AI Companion</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {ARCHETYPES.map(a => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => setState(s => ({ ...s, archetype: a.id }))}
+                        title={a.desc}
+                        style={{ padding: '7px 14px', borderRadius: 99, border: `1.5px solid ${state.archetype === a.id ? 'var(--app-accent)' : 'var(--app-border-strong)'}`, background: state.archetype === a.id ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)', fontWeight: 700, fontSize: 13, cursor: 'pointer', color: state.archetype === a.id ? 'var(--app-accent-ink)' : 'var(--app-text-2)', transition: 'var(--t-fast)' }}
+                      >{a.label}</button>
+                    ))}
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: 26 }}>

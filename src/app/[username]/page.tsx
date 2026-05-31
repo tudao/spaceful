@@ -26,7 +26,7 @@ export default async function UserSpacePage({ params }: Props) {
   // fetch primary space
   const { data: space } = await (supabase as any)
     .from('spaces')
-    .select('id, slug, display_name, design_tokens, content_json, visibility, reactions_enabled')
+    .select('id, slug, display_name, design_tokens, content_json, visibility, reactions_enabled, companion_archetype')
     .eq('user_id', profile.user_id)
     .eq('is_primary', true)
     .single() as {
@@ -35,6 +35,7 @@ export default async function UserSpacePage({ params }: Props) {
         design_tokens: Record<string, unknown> | null;
         content_json: Record<string, unknown> | null;
         visibility: string; reactions_enabled: boolean;
+        companion_archetype?: string;
       } | null;
     };
 

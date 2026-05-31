@@ -11,13 +11,14 @@ import { SharePopover } from '@/components/space/SharePopover';
 import { ReactionForm } from '@/components/space/ReactionForm';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { saveSpaceContent } from './actions';
+import { saveSpaceContent, saveCompanionArchetype } from './actions';
 import { switchTemplate } from './switchTemplate';
 import { SpecRenderer } from '@/components/space/engine/SpecRenderer';
 import type { EngineTokens, TemplateSpec, TemplateSpecOverride } from '@/components/space/engine/types';
 import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
 import { TabNav, type TabId } from '@/components/space/TabNav';
 import { JournalTab } from '@/components/space/JournalTab';
+import { CompanionTab } from '@/components/space/CompanionTab';
 
 interface SpaceRow {
   id: string;
@@ -27,6 +28,7 @@ interface SpaceRow {
   content_json: Record<string, unknown> | null;
   visibility: string;
   reactions_enabled: boolean;
+  companion_archetype?: string;
 }
 
 interface ReactionRow {
@@ -243,6 +245,13 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
         />
       )}
 
+      {activeTab === 'companion' && isOwner && (
+        <CompanionTab
+          spaceId={space.id}
+          palette={{ bg: palette.bg, bg2: palette.bg2, accent: palette.accent, text: palette.text, text2: palette.text2, surface: palette.surface }}
+        />
+      )}
+
       <TabNav
         activeTab={activeTab}
         username={username}
@@ -260,6 +269,7 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
           onClose={() => setSettingsOpen(false)}
           spaceName={spaceName}
           currentTemplateId={activeTemplateId}
+          currentArchetype={space.companion_archetype ?? 'sage'}
           onRegenerate={handleRegenerate}
           onDelete={() => { setSettingsOpen(false); setDeleteOpen(true); }}
           onSwitchTemplate={async (id) => {
@@ -270,6 +280,7 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
               setActiveTemplateSpec(result.templateSpec ?? null);
             }
           }}
+          onSwitchArchetype={(id) => { saveCompanionArchetype(space!.id, id); }}
         />
       )}
 
