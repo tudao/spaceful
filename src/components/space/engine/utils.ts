@@ -5,7 +5,11 @@ import type { TemplateSpec, TemplateSpecOverride } from './types';
 const CORE_SECTIONS = ['goals', 'currently', 'focus_hero', 'notepad', 'kanban', 'habit_tracker', 'reading_list', 'photo', 'quote'] as const;
 
 export function hexA(hex: string, alpha: number): string {
-  if (hex.startsWith('rgba') || hex.startsWith('rgb')) return hex;
+  if (hex.startsWith('rgba') || hex.startsWith('rgb')) {
+    const m = hex.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (m) return `rgba(${m[1]},${m[2]},${m[3]},${alpha})`;
+    return hex;
+  }
   const h = hex.replace('#', '');
   const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
   const n = parseInt(full, 16);

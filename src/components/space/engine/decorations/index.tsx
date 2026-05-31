@@ -107,6 +107,88 @@ function GeometricDecoration({ palette, spec }: DecorationProps) {
   );
 }
 
+function DunesDecoration({ palette, spec }: DecorationProps) {
+  const particleCount = spec.decoration.density === 'lush' ? 32 : spec.decoration.density === 'medium' ? 18 : 0;
+  return (
+    <div aria-hidden style={{ position: spec.decoration.fixed_background ? 'fixed' : 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+      {/* sun orb */}
+      <div style={{
+        position: 'absolute', right: '11%', top: '7%',
+        width: 120, height: 120, borderRadius: '50%',
+        background: `radial-gradient(circle at 38% 38%, ${hexA(palette.accent2, 0.88)}, ${hexA(palette.accent, 0.48)} 52%, transparent 72%)`,
+        filter: 'blur(6px)',
+        animation: spec.decoration.animated ? `sp-drift 22s ease-in-out infinite alternate` : undefined,
+      }} />
+      {/* dune ridge layers */}
+      {[0, 1, 2].map(i => (
+        <svg key={i} viewBox="0 0 1000 320" preserveAspectRatio="none" style={{
+          position: 'absolute', bottom: `${-18 + i * 13}%`, left: 0, width: '100%', height: '52%',
+          animation: spec.decoration.animated ? `sp-drift ${16 + i * 6}s ease-in-out infinite alternate` : undefined,
+        }}>
+          <path
+            d={`M0 ${210 - i * 22} C180 ${95 + i * 28} 380 ${250 - i * 38} 580 ${155 + i * 18} C740 ${88 + i * 22} 860 ${228 - i * 28} 1000 ${185 + i * 12} L1000 320 L0 320Z`}
+            fill={hexA(i === 1 ? palette.accent2 : palette.accent, 0.09 + i * 0.04)}
+          />
+        </svg>
+      ))}
+      {/* sand particles */}
+      {Array.from({ length: particleCount }).map((_, i) => (
+        <span key={i} style={{
+          position: 'absolute',
+          left: `${(i * 19) % 100}%`,
+          bottom: `${4 + (i * 13) % 28}%`,
+          width: 2 + (i % 3), height: 2 + (i % 3),
+          borderRadius: '50%',
+          background: hexA(palette.accent, 0.28 + (i % 4) * 0.08),
+          animation: spec.decoration.animated ? `sp-drift ${3 + (i % 5)}s ease-in-out ${-(i * 0.6)}s infinite alternate` : undefined,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+function RainDecoration({ palette, spec }: DecorationProps) {
+  const count = spec.decoration.density === 'lush' ? 64 : spec.decoration.density === 'medium' ? 38 : 20;
+  return (
+    <div aria-hidden style={{ position: spec.decoration.fixed_background ? 'fixed' : 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+      {/* subtle dark wash for moody feel */}
+      <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${hexA(palette.bg, 0.14)}, transparent 50%)` }} />
+      {/* rain streaks */}
+      {Array.from({ length: count }).map((_, i) => {
+        const len = 14 + (i % 5) * 6;
+        const speed = 0.55 + (i % 7) * 0.14;
+        const delay = -((i * 0.23) % speed);
+        return (
+          <div key={i} style={{
+            position: 'absolute',
+            left: `${(i * 11.3) % 100}%`,
+            top: `${-8 - (i % 3) * 5}%`,
+            width: 1.5,
+            height: len,
+            background: `linear-gradient(180deg, transparent, ${hexA(i % 4 === 0 ? palette.accent2 : palette.accent, 0.38)})`,
+            borderRadius: 1,
+            transform: 'rotate(12deg)',
+            animation: spec.decoration.animated ? `sp-rain ${speed}s linear ${delay}s infinite` : undefined,
+          }} />
+        );
+      })}
+      {/* puddle ripples at bottom */}
+      {spec.decoration.density !== 'minimal' && [0, 1, 2, 3].map(i => (
+        <div key={`ripple-${i}`} style={{
+          position: 'absolute',
+          bottom: `${2 + (i * 7) % 12}%`,
+          left: `${10 + (i * 23) % 72}%`,
+          width: 28 + i * 14,
+          height: 8 + i * 4,
+          borderRadius: '50%',
+          border: `1px solid ${hexA(palette.accent, 0.18)}`,
+          animation: spec.decoration.animated ? `sp-ripple ${1.8 + i * 0.6}s ease-out ${-(i * 0.7)}s infinite` : undefined,
+        }} />
+      ))}
+    </div>
+  );
+}
+
 function MinimalDecoration() {
   return null;
 }
@@ -208,12 +290,12 @@ export const DECORATIONS: Record<DecorationId, React.ComponentType<DecorationPro
   botanicals: BotanicalDecoration,
   starfield: StarfieldDecoration,
   waves: WavesDecoration,
-  dunes: WavesDecoration,
+  dunes: DunesDecoration,
   petals: BotanicalDecoration,
   forest: BotanicalDecoration,
   aurora: AuroraDecoration,
   geometric: GeometricDecoration,
-  rain: StarfieldDecoration,
+  rain: RainDecoration,
   smoke: AuroraDecoration,
   minimal: MinimalDecoration,
   clouds: CloudsDecoration,

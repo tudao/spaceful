@@ -84,6 +84,18 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
   const [deleteOpen, setDeleteOpen]     = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
 
+  // These depend on `space` but must be before any early returns (Rules of Hooks).
+  const dtRaw      = (space?.design_tokens ?? {}) as Record<string, unknown>;
+  const templateId = (dtRaw.template_id as string) ?? 'garden';
+  const [activeTemplateId, setActiveTemplateId]     = useState(templateId);
+  const [activeTemplateSpec, setActiveTemplateSpec] = useState<TemplateSpec | null>(templateSpec);
+  const [activeSpecOverride, setActiveSpecOverride] = useState<TemplateSpecOverride | undefined>(
+    dtRaw.spec_override as TemplateSpecOverride | undefined,
+  );
+  const [localContent, setLocalContent] = useState<SpaceContent>(
+    space ? buildContent(space) : { title: '', goals: [] },
+  );
+
   if (isPrivate) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -112,14 +124,8 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
 
   if (!space) return null;
 
-  const content  = buildContent(space);
-  const dtRaw    = (space.design_tokens ?? {}) as Record<string, unknown>;
-  const mood     = (dtRaw.mood as SpaceMood) ?? 'lavender';
-  const templateId = (dtRaw.template_id as string) ?? 'garden';
-  const [activeTemplateId, setActiveTemplateId] = useState(templateId);
-  const [activeTemplateSpec, setActiveTemplateSpec] = useState<TemplateSpec | null>(templateSpec);
-  const [activeSpecOverride, setActiveSpecOverride] = useState<TemplateSpecOverride | undefined>(dtRaw.spec_override as TemplateSpecOverride | undefined);
-  const [localContent, setLocalContent] = useState<SpaceContent>(content);
+  const content = buildContent(space);
+  const mood    = (dtRaw.mood as SpaceMood) ?? 'lavender';
 
   const tokens: EngineTokens = {
     mood,

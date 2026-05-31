@@ -13,21 +13,29 @@ function GoalsSection({ content, editing, toggleGoal, updateGoalText, addGoal, s
         {content.goals.map(g => (
           <span
             key={g.id}
-            onClick={() => toggleGoal(g.id)}
-            contentEditable={editing || undefined}
-            suppressContentEditableWarning
-            onBlur={e => updateGoalText(g.id, e.currentTarget.innerText.trim())}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 38, padding: '7px 15px',
               borderRadius: 999, border: `1px solid ${g.done ? 'var(--sp-accent)' : styles.border}`,
               background: g.done ? 'var(--sp-done-bg)' : 'var(--sp-chip-bg)', color: g.done ? 'var(--sp-accent)' : 'var(--sp-text2)',
-              fontSize: 14, fontWeight: 700, cursor: editing ? 'pointer' : 'default', outline: 'none',
+              fontSize: 14, fontWeight: 700,
             }}
           >
-            <span style={{ width: 16, height: 16, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: `1.5px solid ${g.done ? 'var(--sp-accent)' : 'var(--sp-muted)'}`, background: g.done ? 'var(--sp-accent)' : 'transparent', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => toggleGoal(g.id)}
+              disabled={!editing}
+              style={{ width: 16, height: 16, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: `1.5px solid ${g.done ? 'var(--sp-accent)' : 'var(--sp-muted)'}`, background: g.done ? 'var(--sp-accent)' : 'transparent', flexShrink: 0, cursor: editing ? 'pointer' : 'default', padding: 0 }}
+            >
               {g.done && <Check size={10} color="#fff" strokeWidth={3} />}
+            </button>
+            <span
+              contentEditable={editing || undefined}
+              suppressContentEditableWarning
+              onBlur={e => updateGoalText(g.id, e.currentTarget.innerText.trim())}
+              style={{ outline: 'none', cursor: editing ? 'text' : 'default' }}
+            >
+              {g.text}
             </span>
-            {g.text}
           </span>
         ))}
         {editing && content.goals.length < 7 && (
@@ -141,11 +149,21 @@ function KanbanSection({ content, editing, onUpdate, styles }: SectionProps) {
   const label = { done: 'Done', prog: 'In progress', plan: 'Planned', blocked: 'Blocked' } as const;
   const statuses = ['plan', 'prog', 'blocked', 'done'] as const;
   const visible = periods.slice(page, page + 3);
+
+  function addPeriod() {
+    const next = [...periods, { week: `W${periods.length + 1}`, title: 'New focus', notes: '', status: 'plan' as const }];
+    onUpdate({ periods: next });
+    setPage(Math.max(0, next.length - 3));
+  }
+
   return (
     <section>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
         <div style={{ ...styles.label, margin: 0 }}>The season so far</div>
         <div style={{ display: 'flex', gap: 6 }}>
+          {editing && periods.length < 52 && (
+            <button type="button" onClick={addPeriod} style={{ ...navButtonStyle(false), fontSize: 18, fontWeight: 300, paddingBottom: 1 }}>+</button>
+          )}
           <button type="button" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))} style={navButtonStyle(page === 0)}><ChevronLeft size={15} /></button>
           <button type="button" disabled={page >= Math.max(0, periods.length - 3)} onClick={() => setPage(p => Math.min(Math.max(0, periods.length - 3), p + 1))} style={navButtonStyle(page >= Math.max(0, periods.length - 3))}><ChevronRight size={15} /></button>
         </div>
@@ -224,22 +242,61 @@ function StreakSection({ content, styles }: SectionProps) {
   );
 }
 
+const HABIT_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
+
 function HabitSection({ content, editing, onUpdate, styles }: SectionProps) {
   const habits = content.habits?.length ? content.habits : [
     { id: 'h1', label: 'Deep work', days: [true, true, false, true, false, true, false] },
     { id: 'h2', label: 'Journal', days: [false, true, true, true, false, false, true] },
     { id: 'h3', label: 'Move', days: [true, false, true, false, true, true, false] },
   ];
+
+  function toggle(habitIndex: number, dayIndex: number) {
+    onUpdate({ habits: habits.map((h, i) => i === habitIndex ? { ...h, days: h.days.map((d, di) => di === dayIndex ? !d : d) } : h) });
+  }
+
+  function addHabit() {
+    onUpdate({ habits: [...habits, { id: Date.now().toString(), label: 'New habit', days: Array(7).fill(false) as boolean[] }] });
+  }
+
+  const colTemplate = 'minmax(90px, 1fr) repeat(7, 28px)';
+
   return (
     <section style={{ ...styles.card, padding: 20 }}>
-      <div style={styles.label}>Habit tracker</div>
-      <div style={{ display: 'grid', gap: 11 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={styles.label}>Habit tracker</div>
+        {editing && habits.length < 8 && (
+          <button type="button" onClick={addHabit} style={{ border: `1px dashed ${styles.border}`, borderRadius: 999, padding: '4px 10px', background: 'transparent', color: styles.muted, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>+ add</button>
+        )}
+      </div>
+      {/* day-of-week header */}
+      <div style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 6, marginBottom: 6, alignItems: 'center' }}>
+        <div />
+        {HABIT_DAYS.map((d, i) => (
+          <div key={i} style={{ fontSize: 10, fontWeight: 900, color: styles.muted, textAlign: 'center' }}>{d}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
         {habits.map((habit, habitIndex) => (
-          <div key={habit.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) repeat(7, 18px)', gap: 8, alignItems: 'center' }}>
-            <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ habits: habits.map((h, i) => i === habitIndex ? { ...h, label: e.currentTarget.innerText.trim() } : h) })} style={{ fontSize: 13, fontWeight: 800, color: 'var(--sp-text2)', outline: 'none' }}>{habit.label}</div>
-            {habit.days.slice(0, 7).map((done, dayIndex) => (
-              <button key={dayIndex} type="button" disabled={!editing} onClick={() => onUpdate({ habits: habits.map((h, i) => i === habitIndex ? { ...h, days: h.days.map((d, di) => di === dayIndex ? !d : d) } : h) })} style={{ width: 18, height: 18, borderRadius: 5, border: `1px solid ${done ? 'var(--sp-accent)' : styles.border}`, background: done ? 'var(--sp-accent)' : 'var(--sp-chip-bg)', cursor: editing ? 'pointer' : 'default' }} />
-            ))}
+          <div key={habit.id} style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 6, alignItems: 'center' }}>
+            <div
+              contentEditable={editing || undefined}
+              suppressContentEditableWarning
+              onBlur={e => onUpdate({ habits: habits.map((h, i) => i === habitIndex ? { ...h, label: e.currentTarget.innerText.trim() } : h) })}
+              style={{ fontSize: 13, fontWeight: 800, color: 'var(--sp-text2)', outline: 'none' }}
+            >{habit.label}</div>
+            {Array.from({ length: 7 }).map((_, dayIndex) => {
+              const done = habit.days[dayIndex] ?? false;
+              return (
+                <button
+                  key={dayIndex}
+                  type="button"
+                  disabled={!editing}
+                  onClick={() => toggle(habitIndex, dayIndex)}
+                  style={{ width: 28, height: 28, borderRadius: 7, border: `1.5px solid ${done ? 'var(--sp-accent)' : styles.border}`, background: done ? 'var(--sp-accent)' : 'var(--sp-chip-bg)', cursor: editing ? 'pointer' : 'default', transition: 'background 0.15s, border-color 0.15s', boxShadow: done ? `0 0 10px var(--sp-glow)` : 'none' }}
+                />
+              );
+            })}
           </div>
         ))}
       </div>
@@ -247,24 +304,52 @@ function HabitSection({ content, editing, onUpdate, styles }: SectionProps) {
   );
 }
 
+const READING_STATUSES = ['reading', 'queued', 'done'] as const;
+const READING_STATUS_LABEL = { reading: 'Reading', queued: 'Queued', done: 'Done' } as const;
+
 function ReadingListSection({ content, editing, onUpdate, styles }: SectionProps) {
   const items = content.readingList?.length ? content.readingList : [
     { id: 'r1', title: 'The current obsession', meta: 'Article / reference', status: 'reading' as const },
     { id: 'r2', title: 'Design notes', meta: 'Queued for later', status: 'queued' as const },
     { id: 'r3', title: 'Launch checklist', meta: 'Done', status: 'done' as const },
   ];
+
+  function cycleStatus(index: number) {
+    if (!editing) return;
+    const cur = READING_STATUSES.indexOf(items[index].status ?? 'queued');
+    const next = READING_STATUSES[(cur + 1) % READING_STATUSES.length];
+    onUpdate({ readingList: items.map((r, i) => i === index ? { ...r, status: next } : r) });
+  }
+
+  function addItem() {
+    onUpdate({ readingList: [...items, { id: Date.now().toString(), title: 'New title', meta: '', status: 'queued' as const }] });
+  }
+
   return (
     <section style={{ ...styles.card, padding: 20 }}>
-      <div style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: 7 }}><BookOpen size={14} /> Reading list</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ ...styles.label, margin: 0, display: 'inline-flex', alignItems: 'center', gap: 7 }}><BookOpen size={14} /> Reading list</div>
+        {editing && items.length < 10 && (
+          <button type="button" onClick={addItem} style={{ border: `1px dashed ${styles.border}`, borderRadius: 999, padding: '4px 10px', background: 'transparent', color: styles.muted, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>+ add</button>
+        )}
+      </div>
       <div style={{ display: 'grid', gap: 10 }}>
         {items.map((item, index) => (
-          <article key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'var(--sp-chip-bg)', border: `1px solid ${styles.border}` }}>
-            <div style={{ width: 36, height: 48, borderRadius: 6, background: `linear-gradient(135deg,var(--sp-accent2),var(--sp-accent))`, flexShrink: 0 }} />
+          <article key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: item.status === 'reading' ? 'var(--sp-done-bg)' : 'var(--sp-chip-bg)', border: `1px solid ${item.status === 'reading' ? 'var(--sp-accent)' : styles.border}`, transition: 'background 0.2s, border-color 0.2s' }}>
+            <div style={{ width: 36, height: 48, borderRadius: 6, background: item.status === 'done' ? `linear-gradient(135deg,rgba(91,171,124,0.4),rgba(61,122,88,0.5))` : `linear-gradient(135deg,var(--sp-accent2),var(--sp-accent))`, flexShrink: 0, opacity: item.status === 'done' ? 0.6 : 1 }} />
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ readingList: items.map((r, i) => i === index ? { ...r, title: e.currentTarget.innerText.trim() } : r) })} style={{ fontSize: 14, fontWeight: 900, color: 'var(--sp-text)', outline: 'none' }}>{item.title}</div>
+              <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ readingList: items.map((r, i) => i === index ? { ...r, title: e.currentTarget.innerText.trim() } : r) })} style={{ fontSize: 14, fontWeight: 900, color: 'var(--sp-text)', outline: 'none', textDecoration: item.status === 'done' ? 'line-through' : 'none', opacity: item.status === 'done' ? 0.55 : 1 }}>{item.title}</div>
               <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ readingList: items.map((r, i) => i === index ? { ...r, meta: e.currentTarget.innerText.trim() } : r) })} style={{ fontSize: 12, color: styles.muted, marginTop: 3, outline: 'none' }}>{item.meta}</div>
             </div>
-            <span style={{ borderRadius: 999, padding: '5px 9px', background: item.status === 'reading' ? 'var(--sp-done-bg)' : 'transparent', border: `1px solid ${styles.border}`, color: item.status === 'reading' ? 'var(--sp-accent)' : styles.muted, fontSize: 11, fontWeight: 900 }}>{item.status}</span>
+            <button
+              type="button"
+              disabled={!editing}
+              onClick={() => cycleStatus(index)}
+              title={editing ? 'Click to change status' : undefined}
+              style={{ borderRadius: 999, padding: '5px 9px', background: item.status === 'reading' ? 'var(--sp-accent)' : 'transparent', border: `1px solid ${item.status === 'reading' ? 'var(--sp-accent)' : styles.border}`, color: item.status === 'reading' ? '#fff' : styles.muted, fontSize: 11, fontWeight: 900, cursor: editing ? 'pointer' : 'default', flexShrink: 0 }}
+            >
+              {READING_STATUS_LABEL[item.status ?? 'queued']}
+            </button>
           </article>
         ))}
       </div>
@@ -287,8 +372,28 @@ function PhotoSection({ content, editing, onUpdate, styles }: SectionProps) {
   const photo = content.photo ?? { url: '', caption: 'A visual anchor for this season.' };
   return (
     <section style={{ ...styles.card, overflow: 'hidden' }}>
-      <div style={{ minHeight: 220, display: 'grid', placeItems: 'center', background: photo.url ? `linear-gradient(rgba(0,0,0,.08),rgba(0,0,0,.08)), url(${photo.url}) center/cover` : 'linear-gradient(135deg,var(--sp-chip-bg),var(--sp-done-bg))', color: 'var(--sp-accent)' }}>
-        {!photo.url && <ImageIcon size={42} />}
+      <div style={{ minHeight: 220, position: 'relative', display: 'grid', placeItems: 'center', background: photo.url ? `linear-gradient(rgba(0,0,0,.08),rgba(0,0,0,.08)), url(${photo.url}) center/cover` : 'linear-gradient(135deg,var(--sp-chip-bg),var(--sp-done-bg))', color: 'var(--sp-accent)' }}>
+        {!photo.url && !editing && <ImageIcon size={42} opacity={0.5} />}
+        {!photo.url && editing && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <ImageIcon size={32} opacity={0.4} />
+            <input
+              type="url"
+              placeholder="Paste an image URL…"
+              onBlur={e => { if (e.target.value.trim()) onUpdate({ photo: { ...photo, url: e.target.value.trim() } }); }}
+              style={{ border: `1px solid ${styles.border}`, borderRadius: 8, padding: '8px 14px', fontSize: 13, background: 'var(--sp-chip-bg)', color: 'var(--sp-text)', outline: 'none', width: 260, textAlign: 'center' }}
+            />
+          </div>
+        )}
+        {photo.url && editing && (
+          <button
+            type="button"
+            onClick={() => onUpdate({ photo: { ...photo, url: '' } })}
+            style={{ position: 'absolute', top: 10, right: 10, border: 0, borderRadius: 999, padding: '4px 10px', background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+          >
+            Remove
+          </button>
+        )}
       </div>
       <div contentEditable={editing || undefined} suppressContentEditableWarning onBlur={e => onUpdate({ photo: { ...photo, caption: e.currentTarget.innerText.trim() } })} style={{ padding: '13px 16px', color: 'var(--sp-text2)', fontSize: 13, fontWeight: 800, outline: 'none' }}>{photo.caption}</div>
     </section>

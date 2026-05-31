@@ -187,6 +187,8 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
         @keyframes sp-header-fish { from { transform: translateX(-90px) translateY(0); } 50% { transform: translateX(54vw) translateY(-8px); } to { transform: translateX(calc(100vw + 90px)) translateY(2px); } }
         @keyframes sp-scene-breathe { from { transform: scale(1.018) translateY(0); } to { transform: scale(1.045) translateY(-5px); } }
         @keyframes sp-firefly { 0%, 100% { transform: translate(0,0) scale(.7); opacity: .18; } 35% { transform: translate(16px,-12px) scale(1); opacity: .86; } 70% { transform: translate(-8px,10px) scale(.82); opacity: .32; } }
+        @keyframes sp-rain { from { transform: rotate(12deg) translateY(-5vh); opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } to { transform: rotate(12deg) translateY(115vh); opacity: 0; } }
+        @keyframes sp-ripple { from { transform: scale(0.4); opacity: 0.6; } to { transform: scale(1.8); opacity: 0; } }
         .sp-scene-image { animation: sp-scene-breathe 16s ease-in-out infinite alternate; }
         .sp-header-stem { animation: sp-header-stem 4.4s ease-in-out infinite; }
         .sp-header-petal { position: absolute; width: 8px; height: 5px; border-radius: 70% 40% 70% 40%; animation: sp-header-petal 9s ease-in-out infinite; }
