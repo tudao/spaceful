@@ -42,6 +42,41 @@ export async function saveSpaceContent(spaceId: string, content: SpaceContent) {
   return { ok: true };
 }
 
+export async function remixThisSpace(sourceSpaceId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Sign in to remix a space' };
+
+  const { data: source } = await (supabase as any)
+    .from('spaces')
+    .select('design_tokens, remix_count')
+    .eq('id', sourceSpaceId)
+    .single() as { data: { design_tokens: Record<string, unknown>; remix_count: number } | null };
+
+  if (!source) return { error: 'Space not found' };
+
+  const { data: mySpace } = await (supabase as any)
+    .from('spaces')
+    .select('id, design_tokens')
+    .eq('user_id', user.id)
+    .eq('is_primary', true)
+    .single() as { data: { id: string; design_tokens: Record<string, unknown> } | null };
+
+  if (!mySpace) return { error: "You don't have a space yet" };
+
+  const merged = {
+    ...(mySpace.design_tokens ?? {}),
+    template_id:   source.design_tokens?.template_id ?? (mySpace.design_tokens as any)?.template_id,
+    spec_override: source.design_tokens?.spec_override,
+    remixed_from_space_id: sourceSpaceId,
+  };
+
+  await (supabase as any).from('spaces').update({ design_tokens: merged }).eq('id', mySpace.id);
+  await (supabase as any).from('spaces').update({ remix_count: (source.remix_count ?? 0) + 1 }).eq('id', sourceSpaceId);
+
+  return { ok: true };
+}
+
 export async function saveCompanionArchetype(spaceId: string, archetype: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

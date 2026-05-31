@@ -87,6 +87,7 @@ export default async function UserSpacePage({ params }: Props) {
       username={username}
       space={space}
       isOwner={isOwner}
+      isLoggedIn={!!user}
       reactions={reactions ?? []}
       creditBalance={isOwner ? profile.credit_balance : 0}
       templateSpec={templateSpec}

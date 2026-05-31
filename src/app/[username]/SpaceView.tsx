@@ -11,7 +11,7 @@ import { SharePopover } from '@/components/space/SharePopover';
 import { ReactionForm } from '@/components/space/ReactionForm';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { saveSpaceContent, saveCompanionArchetype } from './actions';
+import { saveSpaceContent, saveCompanionArchetype, remixThisSpace } from './actions';
 import { switchTemplate } from './switchTemplate';
 import { SpecRenderer } from '@/components/space/engine/SpecRenderer';
 import type { EngineTokens, TemplateSpec, TemplateSpecOverride } from '@/components/space/engine/types';
@@ -42,6 +42,7 @@ interface Props {
   isPrivate?: boolean;
   space?: SpaceRow;
   isOwner?: boolean;
+  isLoggedIn?: boolean;
   reactions?: ReactionRow[];
   creditBalance?: number;
   templateSpec?: TemplateSpec | null;
@@ -105,7 +106,7 @@ function buildContent(space: SpaceRow): SpaceContent {
   };
 }
 
-export function SpaceView({ username, isPrivate, space, isOwner = false, reactions = [], creditBalance = 0, templateSpec = null }: Props) {
+export function SpaceView({ username, isPrivate, space, isOwner = false, isLoggedIn = false, reactions = [], creditBalance = 0, templateSpec = null }: Props) {
   const { toast } = useToast();
   const [mode, setMode] = useState<'editing' | 'preview'>('editing');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -130,6 +131,8 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
   const [activeTab, setActiveTab] = useState<TabId>('space');
   const [pulseStreak, setPulseStreak] = useState(0);
   const [hasJournal, setHasJournal] = useState(false);
+  const [remixing, setRemixing] = useState(false);
+  const [remixMsg, setRemixMsg] = useState('');
 
   useEffect(() => {
     const id = setInterval(() => setTimeState(computeTimeState()), 60_000);
@@ -232,6 +235,29 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
           />
           {!isOwner && space.reactions_enabled && (
             <ReactionForm username={username} spaceId={space.id} goals={localContent.goals} />
+          )}
+          {/* Remix button — shown to logged-in non-owners */}
+          {!isOwner && isLoggedIn && (
+            <div style={{ position: 'fixed', bottom: 90, right: 24, zIndex: 50 }}>
+              {remixMsg && (
+                <div style={{ marginBottom: 8, padding: '8px 14px', borderRadius: 10, background: 'var(--app-accent-soft)', border: '1.5px solid var(--app-accent)', fontSize: 13, fontWeight: 700, color: 'var(--app-accent-ink)', textAlign: 'center' }}>
+                  {remixMsg}
+                </div>
+              )}
+              <button
+                onClick={async () => {
+                  setRemixing(true);
+                  const result = await remixThisSpace(space!.id);
+                  setRemixMsg(result?.error ? result.error : 'Layout applied to your space ✦');
+                  setRemixing(false);
+                  setTimeout(() => setRemixMsg(''), 4000);
+                }}
+                disabled={remixing}
+                style={{ padding: '10px 18px', borderRadius: 99, border: '1.5px solid var(--app-border)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', boxShadow: 'var(--shadow-card)', fontSize: 13, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, color: 'var(--app-text)', opacity: remixing ? 0.6 : 1 }}
+              >
+                ✦ {remixing ? 'Remixing…' : 'Remix layout'}
+              </button>
+            </div>
           )}
         </>
       )}
