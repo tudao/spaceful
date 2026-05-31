@@ -2,6 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { getSettings } from '@/lib/platform-settings';
 import { redirect } from 'next/navigation';
 import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
 import type { TemplateSpecOverride } from '@/components/space/engine/types';
@@ -41,7 +42,8 @@ export async function publishSpace(input: PublishSpaceInput) {
     .single() as { data: { username: string; credit_balance: number } | null };
 
   if (!profile) redirect('/login?next=/onboard');
-  if (profile.credit_balance < 3) return { error: 'insufficient_credits' };
+  const settings = await getSettings();
+  if (profile.credit_balance < settings.generation_credit_cost) return { error: 'insufficient_credits' };
 
   const palette = SPACE_PALETTES[input.mood];
   // Use AI-generated tokens if available; fall back to the preset palette
@@ -93,7 +95,7 @@ export async function publishSpace(input: PublishSpaceInput) {
   const svc = await createServiceClient();
   const { error: creditError } = await (svc as any).rpc('deduct_credits', {
     p_user_id: user.id,
-    p_delta:   3,
+    p_delta:   settings.generation_credit_cost,
     p_action:  'generation',
     p_note:    `Generated "${input.name}"`,
   }) as { error: { message: string } | null };

@@ -6,6 +6,8 @@ export interface TemplateDefinition {
   description: string;
   moodAffinity: SpaceMood[];
   vibeKeywords: string[];
+  domain?: string;
+  companionArchetype?: string;
 }
 
 export const TEMPLATES: TemplateDefinition[] = [
@@ -51,11 +53,50 @@ export const TEMPLATES: TemplateDefinition[] = [
     moodAffinity: ['sand', 'lavender', 'rose'],
     vibeKeywords: ['calm', 'creative', 'minimal', 'dreamy', 'grounded'],
   },
+  // Domain templates
+  {
+    id: 'founder',
+    name: 'Founder',
+    description: 'Startup-focused space with kanban, focus hero, daily pulse, and goals',
+    moodAffinity: ['midnight', 'ocean', 'lavender'],
+    vibeKeywords: ['focused', 'bold', 'energetic', 'minimal'],
+    domain: 'Work',
+    companionArchetype: 'coach',
+  },
+  {
+    id: 'athlete',
+    name: 'Athlete',
+    description: 'Training-focused space with habit tracker, goals, streak, and daily pulse',
+    moodAffinity: ['forest', 'ocean', 'sand'],
+    vibeKeywords: ['energetic', 'focused', 'bold', 'grounded'],
+    domain: 'Health',
+    companionArchetype: 'challenger',
+  },
+  {
+    id: 'student',
+    name: 'Student',
+    description: 'Learning-focused space with reading list, kanban, goals, and daily pulse',
+    moodAffinity: ['lavender', 'sand', 'rose'],
+    vibeKeywords: ['calm', 'focused', 'creative', 'grounded'],
+    domain: 'Learning',
+    companionArchetype: 'sage',
+  },
+  {
+    id: 'creative',
+    name: 'Creative',
+    description: 'Creative space with notepad, photo, goals, and daily pulse for makers',
+    moodAffinity: ['rose', 'lavender', 'sand'],
+    vibeKeywords: ['creative', 'dreamy', 'playful', 'cozy'],
+    domain: 'Creative',
+    companionArchetype: 'poet',
+  },
 ];
 
 export function pickTemplate(mood: SpaceMood, vibes: string[]): string {
+  // Domain templates are opt-in only — exclude from auto-pick
+  const candidates = TEMPLATES.filter(t => !t.domain);
   const scores: Record<string, number> = {};
-  for (const template of TEMPLATES) {
+  for (const template of candidates) {
     scores[template.id] = 0;
     if (template.moodAffinity.includes(mood)) scores[template.id] += 3;
     for (const vibe of vibes) {

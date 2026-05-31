@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spaceful — Implementation Notes</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 860px; margin: 0 auto; padding: 40px 24px; color: #1a1028; line-height: 1.6; }
+    h1 { font-size: 28px; font-weight: 900; margin-bottom: 6px; }
+    h2 { font-size: 18px; font-weight: 800; margin: 36px 0 10px; border-bottom: 2px solid #f0eeff; padding-bottom: 6px; color: #5a3fc0; }
+    h3 { font-size: 15px; font-weight: 700; margin: 22px 0 6px; }
+    p, li { font-size: 14px; color: #3a2a60; }
+    ul { margin: 6px 0; padding-left: 20px; }
+    code { background: #f5f3ff; padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: monospace; }
+    .tag { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; margin-right: 6px; }
+    .decision { background: #e8f4fd; color: #1a6699; }
+    .deviation { background: #fdf3e8; color: #99501a; }
+    .tradeoff { background: #f0eeff; color: #5a3fc0; }
+    .open { background: #fff0f3; color: #99201a; }
+    .section { margin-bottom: 32px; border: 1px solid #ede9ff; border-radius: 12px; padding: 20px 22px; }
+    .meta { font-size: 12px; color: #888; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+<h1>Spaceful — Implementation Notes</h1>
+<p class="meta">Maintained alongside implementation. Last updated: 2026-06-01.</p>
+<p>Documents design decisions, deviations, tradeoffs, and open questions as code was written. Read alongside the CEO plan at <code>~/.gstack/projects/spaceful/ceo-plans/2026-06-01-ritual-first-expansion.md</code>.</p>
+
+<h2>Credit System Reform (migrations 007)</h2>
+
+<div class="section">
+  <h3><span class="tag decision">Decision</span> 10x credit scaling, not a separate companion counter</h3>
+  <p>All credits scaled by 10x (generation 3→30, companion 0.1→1, signup gift 3→30). Daily login grant (10 credits) goes directly into the main <code>profiles.credit_balance</code> — no separate companion daily counter. Keeps the credit system single and legible to users.</p>
+  <p><strong>Why:</strong> A separate counter for companion messages (as originally spec'd in T3) would mean two different credit systems the user has to understand. Single balance wins on UX simplicity.</p>
+</div>
+
+<div class="section">
+  <h3><span class="tag decision">Decision</span> Daily login grant triggers on app layout load, not a cron</h3>
+  <p>The daily credit grant fires in <code>src/app/(app)/layout.tsx</code> on the first authenticated page load of the day, checked via <code>profiles.last_daily_credit_at</code>. No cron required.</p>
+  <p><strong>Tradeoff:</strong> A cron would be more consistent across all users (even those who don't log in). But for a ritual-first product, we <em>want</em> the reward tied to showing up. Only active users get daily credits. This aligns incentives.</p>
+</div>
+
+<div class="section">
+  <h3><span class="tag deviation">Deviation</span> Signup gift credit amount reads from platform_settings at trigger time</h3>
+  <p>The <code>handle_new_user()</code> Postgres trigger was updated to read <code>signup_gift_credits</code> from <code>platform_settings</code> at the moment of user creation. If <code>platform_settings</code> doesn't exist yet (e.g. during migration), defaults to 30.</p>
+  <p><strong>Risk:</strong> If the trigger fires before migration 007 is applied (during a partial deploy), it falls back to 30 via the <code>coalesce</code> default. Safe.</p>
+</div>
+
+<div class="section">
+  <h3><span class="tag open">Open question</span> Renewal credits = signup gift amount?</h3>
+  <p>Subscription renewal currently grants <code>settings.signup_gift_credits</code> (30 credits). This may not be the right amount — monthly renewal could reasonably grant more or less depending on the subscription tier. Not yet wired to Stripe price metadata.</p>
+  <p><strong>To resolve:</strong> When Stripe products are set up, pass credit amount in <code>invoice.metadata.credits</code> (same pattern as <code>checkout.session.metadata.credits</code>).</p>
+</div>
+
+<h2>Stripe Webhook (T1)</h2>
+
+<div class="section">
+  <h3><span class="tag decision">Decision</span> Idempotency via note column LIKE match, not a dedicated field</h3>
+  <p>Before granting credits, we check <code>credit_transactions.note LIKE '%{session_id}%'</code>. This avoids adding a new column while still being safe against Stripe retries.</p>
+  <p><strong>Tradeoff:</strong> A dedicated <code>stripe_event_id</code> column on <code>credit_transactions</code> would be cleaner, but the note LIKE approach works given the existing schema and avoids another migration.</p>
+</div>
+
+<div class="section">
+  <h3><span class="tag deviation">Deviation</span> stripe_customer_id not yet on profiles schema</h3>
+  <p>The Stripe webhook looks up users via <code>profiles.stripe_customer_id</code> for subscription events, but this column is not in the current migrations. The webhook will silently skip those events until the column is added.</p>
+  <p><strong>To fix:</strong> Add <code>alter table profiles add column if not exists stripe_customer_id text;</code> to migration 007 or a follow-up. Also update the checkout flow to write <code>stripe_customer_id</code> on session completion.</p>
+</div>
+
+<h2>Companion Memory (T2)</h2>
+
+<div class="section">
+  <h3><span class="tag decision">Decision</span> Extraction runs as fire-and-forget after stream closes</h3>
+  <p>The fact extraction Haiku call runs after the SSE stream is fully closed — the user never waits for it. This means the companion context won't include facts from the very message that triggered extraction until the <em>next</em> session.</p>
+  <p><strong>Tradeoff:</strong> Extracting mid-stream would block the response. The one-session lag is acceptable — the companion is building a long-term memory, not real-time state.</p>
+</div>
+
+<div class="section">
+  <h3><span class="tag tradeoff">Tradeoff</span> String prefix deduplication (first 15 chars) vs semantic similarity</h3>
+  <p>Facts are deduplicated by comparing the first 15 characters of new vs existing facts. This is cheap but blunt — "running 3x/week" and "runs three times a week" would both be stored. Semantic deduplication (embeddings) was considered and rejected as premature before the feature is validated.</p>
+</div>
+
+<div class="section">
+  <h3><span class="tag open">Open question</span> companion_context column missing from types.ts</h3>
+  <p>Migration 008 adds <code>companion_context</code> to the <code>spaces</code> table, but <code>src/lib/supabase/types.ts</code> is not regenerated here. Run <code>pnpm db:types</code> after applying migrations to get typed access. Currently cast via <code>as any</code> in the companion chat route.</p>
+</div>
+
+<h2>Activation Sequence Cron (T5)</h2>
+
+<div class="section">
+  <h3><span class="tag deviation">Deviation</span> array_append via supabase.raw() — not supported in JS client</h3>
+  <p>The activation cron uses <code>svc.raw('array_append(...)')</code> to append the day number to <code>onboarding_emails_sent[]</code>. The Supabase JS client does not support raw SQL in update expressions. This will fail silently at runtime.</p>
+  <p><strong>Fix needed:</strong> Either (a) read the current array, append in JS, write back; or (b) add a Postgres RPC <code>append_onboarding_day(p_space_id uuid, p_day int)</code>. Option (a) is simpler but has a race condition. Option (b) is safe. Recommend adding the RPC in a follow-up migration.</p>
+</div>
+
+<h2>Domain Templates (T7)</h2>
+
+<div class="section">
+  <h3><span class="tag decision">Decision</span> Domain templates use existing spec resolution, not new DB rows</h3>
+  <p>The 4 domain templates (Founder, Athlete, Student, Creative) are added to the in-memory <code>TEMPLATES</code> catalog in <code>templateCatalog.ts</code>. They do NOT have corresponding <code>space_templates</code> DB rows yet — they rely on the <code>resolveSpec</code> fallback that generates a spec from the template ID.</p>
+  <p><strong>Consequence:</strong> Domain template specs are generated by AI at generation time (same as other templates). If more specific section lists are needed, add DB rows via seed. Template images at <code>/templates/{id}-anime.jpg</code> don't exist yet — the template picker will show a broken image. Add placeholder images before launch.</p>
+</div>
+
+<div class="section">
+  <h3><span class="tag decision">Decision</span> Domain templates excluded from pickTemplate() auto-selection</h3>
+  <p>The <code>pickTemplate()</code> function filters out templates with a <code>domain</code> field. Domain templates are opt-in only (chosen explicitly in onboarding or settings). This prevents AI from auto-assigning a "Founder" template to someone who just chose "bold" vibes.</p>
+</div>
+
+<h2>Weekly Synthesis Cron (T6)</h2>
+
+<div class="section">
+  <h3><span class="tag deviation">Deviation</span> Subquery filter uses raw SQL string interpolation</h3>
+  <p>The weekly synthesis cron filters spaces using <code>.filter('id', 'in', '(SELECT ...)')</code> with a raw SQL string. This works with PostgREST but is not type-safe and the date parameter is interpolated directly. Not a SQL injection risk (it's a server-only cron with a static date string), but brittle.</p>
+  <p><strong>Better approach:</strong> Use a Postgres RPC or a two-step query (fetch qualifying space_ids first, then filter). Acceptable at current scale.</p>
+</div>
+
+<h2>Admin Settings Page (T3)</h2>
+
+<div class="section">
+  <h3><span class="tag open">Open question</span> NEXT_PUBLIC_ADMIN_SECRET is client-exposed</h3>
+  <p>The admin settings page uses <code>process.env.NEXT_PUBLIC_ADMIN_SECRET</code> to authenticate API calls from the browser. This secret is visible in the browser bundle. It's only a problem if the secret is the same as your production admin secret.</p>
+  <p><strong>Recommended fix:</strong> Move admin settings behind Supabase RLS checking a <code>is_admin</code> flag on profiles, and use the user's session cookie for auth instead of a shared secret.</p>
+</div>
+
+<h2>Open Questions Summary</h2>
+<ul>
+  <li>Stripe <code>stripe_customer_id</code> column missing from profiles — add in follow-up migration</li>
+  <li>Subscription renewal credit amount should come from Stripe price metadata, not <code>signup_gift_credits</code></li>
+  <li>Activation cron <code>array_append</code> — needs RPC or read-modify-write fix</li>
+  <li>Domain template images (<code>/templates/founder-anime.jpg</code> etc.) don't exist yet</li>
+  <li>Admin secret exposed client-side — move to session-based auth</li>
+  <li>Run <code>pnpm db:types</code> after migrations to regenerate types for <code>companion_context</code>, <code>platform_settings</code>, etc.</li>
+</ul>
+
+</body>
+</html>

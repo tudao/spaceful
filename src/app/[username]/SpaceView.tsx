@@ -236,6 +236,7 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, isLogge
             greeting={timeState.greeting}
             animSpeed={timeState.animSpeed}
             nudgeDay={isOwner ? timeState.nudgeDay : null}
+            streak={isOwner ? pulseStreak : undefined}
           />
           {!isOwner && space.reactions_enabled && (
             <ReactionForm username={username} spaceId={space.id} goals={localContent.goals} />

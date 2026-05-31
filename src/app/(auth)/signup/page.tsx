@@ -23,10 +23,9 @@ export default function SignupPage() {
     setUsernameOk(null);
     if (!isValidUsername(val)) return;
     setChecking(true);
-    // TODO: check availability via API once DB is live
-    // For now simulate with a small delay
-    await new Promise(r => setTimeout(r, 300));
-    setUsernameOk(true); // optimistic
+    const res = await fetch(`/api/check-username?username=${encodeURIComponent(val)}`);
+    const { available } = await res.json() as { available: boolean };
+    setUsernameOk(available);
     setChecking(false);
   }
 

@@ -60,9 +60,14 @@ export function JournalTab({ spaceId, palette: p, streak }: JournalTabProps) {
             </div>
           )}
         </div>
-        <Link href={`${basePath}?tab=journal&view=timeline`} style={{ fontSize: 13, fontWeight: 700, color: p.accent, textDecoration: 'none', padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${p.accent}44`, background: `${p.accent}12`, marginTop: 4 }}>
-          📸 Evolution →
-        </Link>
+        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+          <Link href={`${basePath}?tab=journal&view=timeline`} style={{ fontSize: 13, fontWeight: 700, color: p.accent, textDecoration: 'none', padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${p.accent}44`, background: `${p.accent}12` }}>
+            Evolution →
+          </Link>
+          <a href={`/api/export?space_id=${spaceId}`} download style={{ fontSize: 13, fontWeight: 700, color: p.text2, textDecoration: 'none', padding: '8px 14px', borderRadius: 10, border, background: p.surface }}>
+            Export
+          </a>
+        </div>
       </div>
 
       {loading && (

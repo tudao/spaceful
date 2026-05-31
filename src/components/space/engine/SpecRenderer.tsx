@@ -21,9 +21,10 @@ interface SpecRendererProps {
   greeting?: string;
   animSpeed?: number;
   nudgeDay?: 'monday' | 'friday' | 'sunday-evening' | null;
+  streak?: number;
 }
 
-export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, onUpdate, onSave, username, greeting, animSpeed = 1, nudgeDay }: SpecRendererProps) {
+export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, onUpdate, onSave, username, greeting, animSpeed = 1, nudgeDay, streak }: SpecRendererProps) {
   const spec = useMemo(() => specProp ?? resolveSpec(tokens.template_id, tokens.spec_override), [specProp, tokens.template_id, tokens.spec_override]);
   const p = tokens.palette;
   const editing = isOwner && mode === 'editing';
@@ -245,8 +246,13 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
               <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--sp-text2)' }}>{spec.typography.header_uppercase ? content.title.toUpperCase() : content.title}</span>
             </div>
             {greeting && (
-              <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 4, letterSpacing: '0.03em' }}>
-                {greeting}, {username ?? content.title.split(' ')[0]}
+              <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 4, letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span>{greeting}, {username ?? content.title.split(' ')[0]}</span>
+                {isOwner && streak != null && streak > 0 && (
+                  <span style={{ padding: '2px 9px', borderRadius: 99, background: 'var(--sp-chip-bg)', border: `1px solid ${border}`, fontSize: 11, fontWeight: 800 }}>
+                    {'🔥'} {streak}
+                  </span>
+                )}
               </div>
             )}
             <h1
