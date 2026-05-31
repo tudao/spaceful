@@ -64,9 +64,17 @@ function CurrentlySection({ content, tokens, editing, onUpdate, styles }: Sectio
   );
 }
 
-function FocusHeroSection({ content, tokens, editing, onUpdate, styles }: SectionProps) {
+function FocusHeroSection({ content, tokens, editing, onUpdate, styles, nudgeDay }: SectionProps) {
+  const titlePlaceholder =
+    nudgeDay === 'monday'         ? 'New week — what matters most?' :
+    nudgeDay === 'friday'         ? 'What was this week\'s big win?' :
+    nudgeDay === 'sunday-evening' ? 'Week wrapping up — set an intention?' :
+                                    tokens.hero_title_placeholder || 'What are you focused on this week?';
+  const notesPlaceholder =
+    nudgeDay === 'friday' ? 'Reflect on the week...' : 'Add some context...';
+  const nudgeRing = nudgeDay === 'monday' && !content.heroTitle && editing;
   return (
-    <section style={{ ...styles.card, padding: '22px 24px', position: 'relative', overflow: 'hidden' }}>
+    <section style={{ ...styles.card, padding: '22px 24px', position: 'relative', overflow: 'hidden', ...(nudgeRing ? { outline: `2px solid var(--sp-accent)`, outlineOffset: 1 } : {}) }}>
       <div style={{ position: 'absolute', right: -50, top: -50, width: 170, height: 170, borderRadius: '50%', background: 'radial-gradient(circle, var(--sp-glow), transparent 68%)' }} />
       <div style={styles.label}>This week / focus</div>
       <div
@@ -75,7 +83,7 @@ function FocusHeroSection({ content, tokens, editing, onUpdate, styles }: Sectio
         onBlur={e => onUpdate({ heroTitle: e.currentTarget.innerText.trim() })}
         style={{ position: 'relative', fontSize: 22, lineHeight: 1.28, fontWeight: 800, marginBottom: 12, color: 'var(--sp-text)', outline: 'none' }}
       >
-        {content.heroTitle || (editing ? tokens.hero_title_placeholder || 'What are you focused on this week?' : '')}
+        {content.heroTitle || (editing ? titlePlaceholder : '')}
       </div>
       <p
         contentEditable={editing || undefined}
@@ -83,7 +91,7 @@ function FocusHeroSection({ content, tokens, editing, onUpdate, styles }: Sectio
         onBlur={e => onUpdate({ heroNotes: e.currentTarget.innerText.trim() })}
         style={{ position: 'relative', margin: 0, fontSize: 14, lineHeight: 1.85, color: 'var(--sp-text2)', minHeight: editing ? 58 : 0, outline: 'none' }}
       >
-        {content.heroNotes || (editing ? 'Add some context...' : '')}
+        {content.heroNotes || (editing ? notesPlaceholder : '')}
       </p>
     </section>
   );
@@ -138,14 +146,25 @@ function NotepadSection({ content, tokens, editing, onUpdate, styles }: SectionP
   );
 }
 
+function isoWeek(d: Date): number {
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  const startOfW1 = new Date(jan4);
+  startOfW1.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
+  return Math.floor((d.getTime() - startOfW1.getTime()) / 604800000) + 1;
+}
+
 function KanbanSection({ content, editing, onUpdate, styles }: SectionProps) {
-  const [page, setPage] = useState(0);
   const periods = content.periods?.length ? content.periods : [
     { week: 'W1', title: content.heroTitle || 'Plan the next move', notes: content.heroNotes || 'Set a direction and keep it visible.', status: 'prog' as const },
     { week: 'W2', title: 'Build momentum', notes: 'Protect the main habit.', status: 'plan' as const },
     { week: 'W3', title: 'Review and adjust', notes: 'Keep what works, remove the rest.', status: 'blocked' as const },
     { week: 'W4', title: 'Launch the next version', notes: 'Show the work and collect feedback.', status: 'done' as const },
   ];
+  const [page, setPage] = useState(() => {
+    const week = isoWeek(new Date());
+    const idx = periods.findIndex(p => p.week === `W${week}`);
+    return idx === -1 ? 0 : Math.max(0, idx - 1);
+  });
   const label = { done: 'Done', prog: 'In progress', plan: 'Planned', blocked: 'Blocked' } as const;
   const statuses = ['plan', 'prog', 'blocked', 'done'] as const;
   const visible = periods.slice(page, page + 3);
@@ -245,6 +264,8 @@ function StreakSection({ content, styles }: SectionProps) {
 const HABIT_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 
 function HabitSection({ content, editing, onUpdate, styles }: SectionProps) {
+  // HABIT_DAYS starts Monday=0; JS getDay() is Sun=0 Mon=1…Sat=6
+  const todayIndex = (new Date().getDay() + 6) % 7;
   const habits = content.habits?.length ? content.habits : [
     { id: 'h1', label: 'Deep work', days: [true, true, false, true, false, true, false] },
     { id: 'h2', label: 'Journal', days: [false, true, true, true, false, false, true] },
@@ -273,7 +294,7 @@ function HabitSection({ content, editing, onUpdate, styles }: SectionProps) {
       <div style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 6, marginBottom: 6, alignItems: 'center' }}>
         <div />
         {HABIT_DAYS.map((d, i) => (
-          <div key={i} style={{ fontSize: 10, fontWeight: 900, color: styles.muted, textAlign: 'center' }}>{d}</div>
+          <div key={i} style={{ fontSize: 10, fontWeight: 900, textAlign: 'center', color: i === todayIndex ? 'var(--sp-accent)' : styles.muted }}>{d}</div>
         ))}
       </div>
       <div style={{ display: 'grid', gap: 8 }}>
@@ -293,7 +314,7 @@ function HabitSection({ content, editing, onUpdate, styles }: SectionProps) {
                   type="button"
                   disabled={!editing}
                   onClick={() => toggle(habitIndex, dayIndex)}
-                  style={{ width: 28, height: 28, borderRadius: 7, border: `1.5px solid ${done ? 'var(--sp-accent)' : styles.border}`, background: done ? 'var(--sp-accent)' : 'var(--sp-chip-bg)', cursor: editing ? 'pointer' : 'default', transition: 'background 0.15s, border-color 0.15s', boxShadow: done ? `0 0 10px var(--sp-glow)` : 'none' }}
+                  style={{ width: 28, height: 28, borderRadius: 7, border: `1.5px solid ${done ? 'var(--sp-accent)' : dayIndex === todayIndex ? 'var(--sp-accent)' : styles.border}`, background: done ? 'var(--sp-accent)' : 'var(--sp-chip-bg)', cursor: editing ? 'pointer' : 'default', transition: 'background 0.15s, border-color 0.15s', boxShadow: done ? `0 0 10px var(--sp-glow)` : dayIndex === todayIndex ? `0 0 6px var(--sp-glow)` : 'none', opacity: dayIndex === todayIndex && !done ? 1 : undefined }}
                 />
               );
             })}

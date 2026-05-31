@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Music, VolumeX } from 'lucide-react';
 
 // Maps each mood to a drone frequency (Hz) and timbre character
@@ -32,6 +32,7 @@ export function AmbientPlayer({ mood, accentColor }: AmbientPlayerProps) {
   }, []);
 
   const start = useCallback(() => {
+    localStorage.setItem('spaceful-ambient-played', '1');
     const config = MOOD_AUDIO[mood] ?? MOOD_AUDIO.lavender;
     const ctx = new AudioContext();
     ctxRef.current = ctx;
@@ -85,6 +86,15 @@ export function AmbientPlayer({ mood, accentColor }: AmbientPlayerProps) {
 
     setPlaying(true);
   }, [mood]);
+
+  useEffect(() => {
+    const h = new Date().getHours();
+    if ((h >= 19 || h < 5) && localStorage.getItem('spaceful-ambient-played') === '1') {
+      start();
+    }
+  // start is stable (useCallback with [mood]) — only run on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function toggle() {
     if (playing) stop(); else start();

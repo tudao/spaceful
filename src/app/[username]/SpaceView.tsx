@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Lock, Sparkles } from 'lucide-react';
 import { type SpaceContent, type SpacePalette } from '@/components/space/SpacePage';
@@ -40,6 +40,24 @@ interface Props {
   reactions?: ReactionRow[];
   creditBalance?: number;
   templateSpec?: TemplateSpec | null;
+}
+
+function computeTimeState() {
+  const h = new Date().getHours();
+  const day = new Date().getDay(); // 0=Sun, 1=Mon … 6=Sat
+  const greeting =
+    h < 5  ? 'Late night' :
+    h < 12 ? 'Good morning' :
+    h < 18 ? 'Good afternoon' :
+    h < 23 ? 'Good evening' :
+             'Late night';
+  const animSpeed = (h >= 19 || h < 5) ? 0.65 : 1.0;
+  const nudgeDay: 'monday' | 'friday' | 'sunday-evening' | null =
+    day === 1            ? 'monday' :
+    day === 5            ? 'friday' :
+    day === 0 && h >= 20 ? 'sunday-evening' :
+                           null;
+  return { greeting, animSpeed, nudgeDay };
 }
 
 function timeAgo(dateStr: string) {
@@ -95,6 +113,12 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
   const [localContent, setLocalContent] = useState<SpaceContent>(
     space ? buildContent(space) : { title: '', goals: [] },
   );
+  const [timeState, setTimeState] = useState(computeTimeState);
+
+  useEffect(() => {
+    const id = setInterval(() => setTimeState(computeTimeState()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   if (isPrivate) {
     return (
@@ -176,6 +200,10 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
         mode={mode}
         onUpdate={(patch) => setLocalContent(c => ({ ...c, ...patch }))}
         onSave={handleSave}
+        username={username}
+        greeting={timeState.greeting}
+        animSpeed={timeState.animSpeed}
+        nudgeDay={isOwner ? timeState.nudgeDay : null}
       />
 
       {!isOwner && space.reactions_enabled && (

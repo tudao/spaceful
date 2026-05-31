@@ -17,9 +17,13 @@ interface SpecRendererProps {
   mode: 'editing' | 'preview';
   onUpdate: (patch: Partial<SpaceContent>) => void;
   onSave: (content: SpaceContent) => Promise<unknown>;
+  username?: string;
+  greeting?: string;
+  animSpeed?: number;
+  nudgeDay?: 'monday' | 'friday' | 'sunday-evening' | null;
 }
 
-export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, onUpdate, onSave }: SpecRendererProps) {
+export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, onUpdate, onSave, username, greeting, animSpeed = 1, nudgeDay }: SpecRendererProps) {
   const spec = useMemo(() => specProp ?? resolveSpec(tokens.template_id, tokens.spec_override), [specProp, tokens.template_id, tokens.spec_override]);
   const p = tokens.palette;
   const editing = isOwner && mode === 'editing';
@@ -71,6 +75,7 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
     '--sp-glow': p.glow,
     '--sp-chip-bg': isDarkMood(tokens.mood) ? hexA(p.surface, 0.34) : 'rgba(255,255,255,0.62)',
     '--sp-done-bg': hexA(p.accent, 0.15),
+    '--sp-anim-speed': String(animSpeed),
   } as React.CSSProperties;
 
   const sectionProps = {
@@ -80,6 +85,7 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
     isOwner,
     mode,
     editing,
+    nudgeDay,
     onUpdate: commit,
     updateGoalText,
     toggleGoal,
@@ -189,14 +195,14 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
         @keyframes sp-firefly { 0%, 100% { transform: translate(0,0) scale(.7); opacity: .18; } 35% { transform: translate(16px,-12px) scale(1); opacity: .86; } 70% { transform: translate(-8px,10px) scale(.82); opacity: .32; } }
         @keyframes sp-rain { from { transform: rotate(12deg) translateY(-5vh); opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } to { transform: rotate(12deg) translateY(115vh); opacity: 0; } }
         @keyframes sp-ripple { from { transform: scale(0.4); opacity: 0.6; } to { transform: scale(1.8); opacity: 0; } }
-        .sp-scene-image { animation: sp-scene-breathe 16s ease-in-out infinite alternate; }
-        .sp-header-stem { animation: sp-header-stem 4.4s ease-in-out infinite; }
-        .sp-header-petal { position: absolute; width: 8px; height: 5px; border-radius: 70% 40% 70% 40%; animation: sp-header-petal 9s ease-in-out infinite; }
-        .sp-header-cloud { position: absolute; left: -220px; height: auto; opacity: .68; filter: drop-shadow(0 16px 18px rgba(82,108,134,.12)); animation: sp-header-cloud 32s linear infinite; }
+        .sp-scene-image { animation: sp-scene-breathe calc(16s / var(--sp-anim-speed, 1)) ease-in-out infinite alternate; }
+        .sp-header-stem { animation: sp-header-stem calc(4.4s / var(--sp-anim-speed, 1)) ease-in-out infinite; }
+        .sp-header-petal { position: absolute; width: 8px; height: 5px; border-radius: 70% 40% 70% 40%; animation: sp-header-petal calc(9s / var(--sp-anim-speed, 1)) ease-in-out infinite; }
+        .sp-header-cloud { position: absolute; left: -220px; height: auto; opacity: .68; filter: drop-shadow(0 16px 18px rgba(82,108,134,.12)); animation: sp-header-cloud calc(32s / var(--sp-anim-speed, 1)) linear infinite; }
         .sp-header-sun { position: absolute; right: 7%; top: 9%; width: 130px; height: 130px; border-radius: 50%; filter: blur(1px); opacity: .72; }
-        .sp-header-wave { position: absolute; left: -8%; right: -8%; height: 92px; border-radius: 50% 50% 0 0; animation: sp-header-wave 5.4s ease-in-out infinite alternate; }
-        .sp-header-fish { position: absolute; left: -96px; width: 48px; opacity: .48; animation: sp-header-fish 17s linear infinite; }
-        .sp-firefly { position: absolute; width: 5px; height: 5px; border-radius: 50%; box-shadow: 0 0 14px currentColor; animation: sp-firefly 4.8s ease-in-out infinite; }
+        .sp-header-wave { position: absolute; left: -8%; right: -8%; height: 92px; border-radius: 50% 50% 0 0; animation: sp-header-wave calc(5.4s / var(--sp-anim-speed, 1)) ease-in-out infinite alternate; }
+        .sp-header-fish { position: absolute; left: -96px; width: 48px; opacity: .48; animation: sp-header-fish calc(17s / var(--sp-anim-speed, 1)) linear infinite; }
+        .sp-firefly { position: absolute; width: 5px; height: 5px; border-radius: 50%; box-shadow: 0 0 14px currentColor; animation: sp-firefly calc(4.8s / var(--sp-anim-speed, 1)) ease-in-out infinite; }
         .spec-header-scene::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, var(--sp-accent), var(--sp-accent2), #f4a89a, var(--sp-accent)); background-size: 300% 100%; animation: sp-shimmer 4.8s linear infinite; }
         @keyframes sp-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
         @media (max-width: 760px) { .spec-mid { grid-template-columns: 1fr !important; } .spec-header { align-items: flex-start !important; } .spec-header-scene { min-height: 300px !important; } }
@@ -238,6 +244,11 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
               </div>
               <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--sp-text2)' }}>{spec.typography.header_uppercase ? content.title.toUpperCase() : content.title}</span>
             </div>
+            {greeting && (
+              <div style={{ fontSize: 12, fontWeight: 700, color: muted, marginBottom: 4, letterSpacing: '0.03em' }}>
+                {greeting}, {username ?? content.title.split(' ')[0]}
+              </div>
+            )}
             <h1
               contentEditable={editing || undefined}
               suppressContentEditableWarning
