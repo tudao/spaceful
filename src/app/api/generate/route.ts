@@ -6,11 +6,12 @@ import { pickTemplate } from '@/components/space/engine/templateCatalog';
 import { DECORATION_IDS, SECTION_IDS } from '@/components/space/engine/types';
 
 const InputSchema = z.object({
-  name:   z.string().min(1).max(60),
-  vibes:  z.array(z.string()).max(3),
-  goal:   z.string().max(120),
-  mood:   z.enum(['lavender','sand','forest','ocean','rose','midnight']),
-  layout: z.enum(['spacious','rich']),
+  name:        z.string().min(1).max(60),
+  vibes:       z.array(z.string()).max(3),
+  goal:        z.string().max(120),
+  mood:        z.enum(['lavender','sand','forest','ocean','rose','midnight']),
+  layout:      z.enum(['spacious','rich']),
+  template_id: z.string().optional(), // '' or omitted = AI picks via pickTemplate
 });
 
 const SpecSchema = z.object({
@@ -162,15 +163,16 @@ Colour values must be valid CSS hex (#RRGGBB). glow must be a valid rgba() strin
         const jsonStr   = jsonStart >= 0 && jsonEnd > jsonStart ? raw.slice(jsonStart, jsonEnd + 1) : '{}';
         const validated = TokenSchema.safeParse(JSON.parse(jsonStr));
 
+        const resolveTemplateId = (mood: string) =>
+          input.template_id || pickTemplate(mood as SpaceMood, input.vibes);
+
+        const toTokens = (data: z.infer<typeof TokenSchema>) => {
+          const { layout, decoration, cards, typography, ...rest } = data;
+          return { ...rest, template_id: resolveTemplateId(data.mood), spec_override: { layout, decoration, cards, typography } };
+        };
+
         if (validated.success) {
-          // Attach template_id (picked from mood + vibes, not from LLM output)
-          const { layout, decoration, cards, typography, ...rest } = validated.data;
-          const tokens = {
-            ...rest,
-            template_id: pickTemplate(validated.data.mood as SpaceMood, input.vibes),
-            spec_override: { layout, decoration, cards, typography },
-          };
-          emit({ stage: 'done', tokens });
+          emit({ stage: 'done', tokens: toTokens(validated.data) });
         } else {
           // Retry once with stricter prompt
           const retry = await client.messages.create({
@@ -189,13 +191,7 @@ Colour values must be valid CSS hex (#RRGGBB). glow must be a valid rgba() strin
           const retryValidated = TokenSchema.safeParse(
             JSON.parse(js >= 0 && je > js ? retryText.slice(js, je + 1) : '{}')
           );
-          const retryTokens = retryValidated.success
-            ? (() => {
-              const { layout, decoration, cards, typography, ...rest } = retryValidated.data;
-              return { ...rest, template_id: pickTemplate(retryValidated.data.mood as SpaceMood, input.vibes), spec_override: { layout, decoration, cards, typography } };
-            })()
-            : fallbackTokens(input.mood, input.layout, input.vibes);
-          emit({ stage: 'done', tokens: retryTokens });
+          emit({ stage: 'done', tokens: retryValidated.success ? toTokens(retryValidated.data) : fallbackTokens(input.mood, input.layout, input.vibes) });
         }
       } catch (err) {
         console.error('[generate] error:', err);
@@ -217,6 +213,9 @@ Colour values must be valid CSS hex (#RRGGBB). glow must be a valid rgba() strin
 
 function buildPrompt(input: z.infer<typeof InputSchema>): string {
   const base = SPACE_PALETTES[input.mood];
+  const templateHint = input.template_id
+    ? `- Chosen base template: "${input.template_id}" — honour its decoration type and header style spirit, but personalise the palette, density, and section selection for this specific person.`
+    : `- No base template chosen — pick the decoration type and header style that best fits the vibe.`;
   return `
 Generate a personalised space theme for someone with these preferences:
 
@@ -225,6 +224,7 @@ Generate a personalised space theme for someone with these preferences:
 - Current big goal: "${input.goal || 'not specified'}"
 - Colour mood chosen: ${input.mood} (base palette: bg=${base.bg}, accent=${base.accent})
 - Layout preference: ${input.layout} (spacious = breathing room, rich = dense info)
+${templateHint}
 
 Return ONLY this JSON object (no markdown):
 {

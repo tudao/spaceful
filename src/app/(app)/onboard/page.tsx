@@ -7,6 +7,8 @@ import { ArrowLeft, ArrowRight, Sparkles, Check, RefreshCw } from 'lucide-react'
 import { MiniSpace } from '@/components/space/MiniSpace';
 import { Fireflies } from '@/components/space/Fireflies';
 import { SPACE_PALETTES, type SpaceMood, CREDIT_COSTS } from '@/lib/utils';
+import { TEMPLATES } from '@/components/space/engine/templateCatalog';
+import type { TemplateSpecOverride } from '@/components/space/engine/types';
 import { publishSpace } from './actions';
 
 const VIBES = ['calm','creative','focused','cozy','bold','playful','minimal','dreamy','grounded','energetic'];
@@ -27,6 +29,7 @@ interface State {
   goal: string;
   mood: SpaceMood;
   layout: 'spacious' | 'rich';
+  templateId: string; // '' = let AI surprise
 }
 
 // Shape returned by /api/generate when stage === 'done'
@@ -34,6 +37,8 @@ interface GeneratedTokens {
   mood: SpaceMood;
   layout_variant: 'spacious' | 'rich';
   animation_level: string;
+  template_id?: string;
+  spec_override?: TemplateSpecOverride;
   palette: Record<string, string>;
   tagline: string;
   hero_title_placeholder: string;
@@ -46,7 +51,7 @@ export default function OnboardPage() {
 
   const [step, setStep]   = useState(0);
   const [phase, setPhase] = useState<Phase>('steps');
-  const [state, setState] = useState<State>({ name: '', vibes: [], goal: '', mood: 'lavender', layout: 'spacious' });
+  const [state, setState] = useState<State>({ name: '', vibes: [], goal: '', mood: 'lavender', layout: 'rich', templateId: '' });
   const [publishError, setPublishError] = useState('');
   const [isPending, startTransition] = useTransition();
 
@@ -87,7 +92,7 @@ export default function OnboardPage() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state),
+        body: JSON.stringify({ ...state, template_id: state.templateId || undefined }),
         signal: ctrl.signal,
       });
 
@@ -286,50 +291,89 @@ export default function OnboardPage() {
               </div>
             )}
 
-            {/* Step 5 — layout */}
+            {/* Step 5 — template picker */}
             {step === 4 && (
               <div>
                 <div style={{ fontSize: 'clamp(26px,4.4vw,38px)', fontWeight: 800, letterSpacing: '-0.01em', lineHeight: 1.2, marginBottom: 8, textAlign: 'center' }}>
-                  How should your space feel?
+                  Pick a world to start from.
                 </div>
-                <div style={{ fontSize: 15, color: 'var(--app-text-2)', textAlign: 'center', marginBottom: 30 }}>You can change this anytime.</div>
-                <div style={{ display: 'flex', gap: 18, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {([
-                    { key: 'spacious', label: 'Spacious', desc: 'One focal goal, lots of breathing room.' },
-                    { key: 'rich',     label: 'Rich',     desc: 'Goals, notepad & week planner, all visible.' },
-                  ] as const).map(({ key, label, desc }) => (
-                    <div
-                      key={key}
-                      onClick={() => setState(s => ({ ...s, layout: key }))}
-                      style={{
-                        width: 240, cursor: 'pointer',
-                        background: 'rgba(255,255,255,0.7)',
-                        border: `2px solid ${state.layout === key ? 'var(--app-accent)' : 'var(--app-border-strong)'}`,
-                        borderRadius: 18, padding: 18,
-                        boxShadow: state.layout === key ? 'var(--shadow-card)' : 'none',
-                        transition: 'var(--t-fast)',
-                      }}
-                    >
-                      {/* wireframe */}
-                      <div style={{ height: 120, borderRadius: 10, background: 'var(--app-bg-2)', border: '1px solid var(--app-border)', padding: 14, display: 'flex', flexDirection: 'column', gap: 8, alignItems: key === 'spacious' ? 'center' : 'stretch', justifyContent: key === 'spacious' ? 'center' : 'flex-start' }}>
-                        {key === 'spacious' ? (
-                          <div style={{ width: '60%', height: 34, borderRadius: 8, background: 'var(--app-accent-soft)', border: '1px solid var(--app-accent)' }} />
-                        ) : (
-                          <>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              {[...Array(4)].map((_, i) => <div key={i} style={{ flex: 1, height: 18, borderRadius: 5, background: 'var(--app-accent-soft)' }} />)}
+                <div style={{ fontSize: 15, color: 'var(--app-text-2)', textAlign: 'center', marginBottom: 26 }}>
+                  AI will personalise it for you. Or let it choose.
+                </div>
+
+                {/* 3-col template grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                  {TEMPLATES.map(t => {
+                    const selected = state.templateId === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setState(s => ({ ...s, templateId: t.id }))}
+                        style={{
+                          padding: 0, cursor: 'pointer', textAlign: 'left',
+                          borderRadius: 14, overflow: 'hidden',
+                          border: `2.5px solid ${selected ? 'var(--app-accent)' : 'transparent'}`,
+                          boxShadow: selected ? 'var(--shadow-card)' : '0 2px 8px rgba(0,0,0,0.08)',
+                          transform: selected ? 'scale(1.03)' : 'scale(1)',
+                          transition: 'var(--t-fast)',
+                          background: 'none',
+                        }}
+                      >
+                        <div style={{ position: 'relative', height: 106, overflow: 'hidden' }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={`/templates/${t.id}-anime.jpg`}
+                            alt={t.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                          />
+                          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.55) 0%, transparent 55%)' }} />
+                          {selected && (
+                            <div style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%', background: 'var(--app-accent)', display: 'grid', placeItems: 'center' }}>
+                              <Check size={13} color="#fff" strokeWidth={3} />
                             </div>
-                            <div style={{ height: 8, width: '90%', borderRadius: 99, background: 'var(--app-border-strong)' }} />
-                            <div style={{ height: 8, width: '70%', borderRadius: 99, background: 'var(--app-border-strong)' }} />
-                          </>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 16, fontWeight: 800, marginTop: 14 }}>{label}</div>
-                      <div style={{ fontSize: 13, color: 'var(--app-text-2)' }}>{desc}</div>
-                    </div>
+                          )}
+                          <div style={{ position: 'absolute', bottom: 8, left: 10, color: '#fff', fontSize: 13, fontWeight: 800, lineHeight: 1 }}>
+                            {t.name}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Surprise me */}
+                <button
+                  type="button"
+                  onClick={() => setState(s => ({ ...s, templateId: '' }))}
+                  style={{
+                    width: '100%', marginTop: 12, padding: '13px 20px',
+                    borderRadius: 14, cursor: 'pointer',
+                    border: `2px dashed ${state.templateId === '' ? 'var(--app-accent)' : 'var(--app-border-strong)'}`,
+                    background: state.templateId === '' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.45)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    transition: 'var(--t-fast)',
+                  }}
+                >
+                  <Sparkles size={18} style={{ color: 'var(--app-accent)' }} />
+                  <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--app-text)' }}>Let AI surprise me</span>
+                  {state.templateId === '' && <Check size={16} style={{ color: 'var(--app-accent)', marginLeft: 4 }} />}
+                </button>
+
+                {/* compact density toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 18 }}>
+                  <span style={{ fontSize: 13, color: 'var(--app-text-2)', fontWeight: 700 }}>Density:</span>
+                  {(['spacious', 'rich'] as const).map(key => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setState(s => ({ ...s, layout: key }))}
+                      style={{ padding: '5px 14px', borderRadius: 99, border: `1.5px solid ${state.layout === key ? 'var(--app-accent)' : 'var(--app-border-strong)'}`, background: state.layout === key ? 'rgba(255,255,255,0.85)' : 'transparent', fontWeight: 700, fontSize: 13, cursor: 'pointer', color: state.layout === key ? 'var(--app-accent-ink)' : 'var(--app-text-2)', transition: 'var(--t-fast)' }}
+                    >{key === 'spacious' ? 'Spacious' : 'Rich'}</button>
                   ))}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 30 }}>
+
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 26 }}>
                   <button className="btn btn-primary btn-lg" onClick={startGeneration}>
                     <Sparkles size={18} /> Generate my space
                   </button>
