@@ -590,6 +590,8 @@ code {
   <a href="#flow-render">Space Render Chain</a>
   <a href="#flow-credits">Credit Deduction</a>
   <a href="#flow-edit">Content Edit → Save</a>
+  <a href="#flow-pulse">Daily Pulse + Companion</a>
+  <a href="#flow-letter">Monthly AI Letter</a>
 </nav>
 
 <!-- ═══ MAIN ═══ -->
@@ -1569,6 +1571,209 @@ code {
 </div>
 </div>
 </div><!-- /flow-edit -->
+
+<div class="divider"></div>
+
+<!-- ── Flow 5: Daily Pulse Entry ── -->
+<div class="section" id="flow-pulse">
+<h3>5 — Daily Pulse Entry</h3>
+<div class="swimlane-wrap">
+<div class="swimlane">
+
+  <div class="sl-col sl-browser">
+    <div class="sl-header">Browser (Client)</div>
+    <div class="sl-body">
+      <div class="sl-step hl-blue">
+        <strong>Owner opens space (morning)</strong>
+        <em>DailyPulseSection shows morning prompt</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> types + tabs out</div>
+      <div class="sl-step hl-blue">
+        <strong>onBlur — textarea</strong>
+        <em>savePulseEntry(spaceId, today, 'morning', body)</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-blue">
+        <strong>Streak updates</strong>
+        <em>today_logged = true, streak shown</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-blue">
+        <strong>Opens Companion tab</strong>
+        <em>GET /api/companion/daily</em>
+      </div>
+      <div class="sl-step hl-blue">
+        <strong>Loading skeleton shown</strong>
+        <em>~2s while Claude generates</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> cached response</div>
+      <div class="sl-step hl-blue">
+        <strong>Daily message + quote displayed</strong>
+        <em>Free — no credit deducted</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-server">
+    <div class="sl-header">Server</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>savePulseEntry server action</strong>
+        <em>Auth check → upsert daily_pulse_entries</em>
+      </div>
+      <div class="sl-step hl-green">
+        <strong>UPSERT daily_pulse_entries</strong>
+        <em>ON CONFLICT (space_id, date, period) DO UPDATE</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>GET /api/pulse</strong>
+        <em>Scan entries backwards from yesterday ≤365 rows → streak</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>GET /api/companion/daily</strong>
+        <em>Check companion_daily for (space_id, today)</em>
+      </div>
+      <div class="sl-step hl-green">
+        <strong>Cache miss → build context</strong>
+        <em>goals + habits + pulse entries + reading list (~600 tokens)</em>
+      </div>
+      <div class="sl-step hl-green">
+        <strong>Claude Haiku → message + pgvector quote</strong>
+        <em>INSERT companion_daily, return result</em>
+      </div>
+      <div class="sl-step empty"></div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-db">
+    <div class="sl-header">Database</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>UPSERT daily_pulse_entries</strong>
+        <em>entry_date, period, body, space_id, user_id</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT daily_pulse_entries</strong>
+        <em>Ordered by entry_date DESC LIMIT 365</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT companion_daily</strong>
+        <em>WHERE space_id = $1 AND date = today</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT quotes ORDER BY embedding &lt;-&gt; $goal_emb LIMIT 1</strong>
+      </div>
+      <div class="sl-step hl-pink">
+        <strong>INSERT companion_daily</strong>
+        <em>message, quote_text, quote_attr cached for the day</em>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div><!-- /flow-pulse -->
+
+<!-- ── Flow 6: Monthly AI Letter ── -->
+<div class="section" id="flow-letter">
+<h3>6 — Monthly AI Letter (Cron)</h3>
+<div class="swimlane-wrap">
+<div class="swimlane">
+
+  <div class="sl-col sl-browser">
+    <div class="sl-header">Vercel Cron (1st &amp; 2nd)</div>
+    <div class="sl-body">
+      <div class="sl-step hl-orange">
+        <strong>1st of month — monthly-snapshot cron</strong>
+        <em>POST /api/cron/monthly-snapshot</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> batches 100 spaces</div>
+      <div class="sl-step hl-orange">
+        <strong>SELECT active spaces WHERE NOT EXISTS snapshot</strong>
+        <em>Idempotent — re-run safe</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-orange">
+        <strong>2nd of month — monthly-letter cron</strong>
+        <em>POST /api/cron/monthly-letter</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-orange">
+        <strong>Diff current vs previous snapshot</strong>
+        <em>goals added/done, habit rate, notepad word count</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> Claude Haiku</div>
+      <div class="sl-step hl-blue">
+        <strong>5-sentence personal letter</strong>
+        <em>References real diff data — not generic platitudes</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-server">
+    <div class="sl-header">Server</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>INSERT space_snapshots</strong>
+        <em>content_json snapshot per active space</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>UPSERT daily_pulse_entries</strong>
+        <em>period = 'ai_letter', body = letter text</em>
+      </div>
+      <div class="sl-step hl-green">
+        <strong>Send via Resend</strong>
+        <em>MonthlyLetter.tsx email template</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-db">
+    <div class="sl-header">Database</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>INSERT space_snapshots</strong>
+        <em>PK (space_id, snapshot_at) prevents duplicates</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT space_snapshots × 2</strong>
+        <em>current month + previous month per space</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>UPSERT daily_pulse_entries</strong>
+        <em>Letter visible in Journal tab immediately</em>
+      </div>
+      <div class="sl-step empty"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div><!-- /flow-letter -->
 
 </main>
 </body>

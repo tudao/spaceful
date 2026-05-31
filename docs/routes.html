@@ -442,6 +442,7 @@
 
   <div class="section-label">Space view</div>
   <a href="#username">/:username  <span class="badge badge-page">Page</span></a>
+  <a href="#username-tabs">/:username?tab=  <span class="badge badge-page">Tabs</span></a>
   <a href="#username-slug">/:username/:slug  <span class="badge badge-page">Page</span></a>
 
   <div class="section-label">Admin</div>
@@ -452,13 +453,19 @@
   <div class="section-label">API Routes</div>
   <a href="#api-generate">/api/generate  <span class="badge badge-api">SSE</span></a>
   <a href="#api-admin-templates">/api/admin/templates  <span class="badge badge-api">REST</span></a>
-  <a href="#api-reactions">/api/reactions  <span class="badge badge-stub">Stub</span></a>
+  <a href="#api-reactions">/api/reactions  <span class="badge badge-api">REST</span></a>
+  <a href="#api-pulse">/api/pulse  <span class="badge badge-api">REST</span></a>
+  <a href="#api-companion">/api/companion/*  <span class="badge badge-api">SSE+REST</span></a>
+  <a href="#api-unsubscribe">/api/unsubscribe  <span class="badge badge-api">REST</span></a>
+  <a href="#api-cron">/api/cron/*  <span class="badge badge-api">Cron</span></a>
   <a href="#api-stripe">/api/stripe/webhook  <span class="badge badge-stub">Stub</span></a>
 
   <div class="section-label">Server Actions</div>
   <a href="#action-publish">publishSpace</a>
   <a href="#action-save">saveSpaceContent</a>
   <a href="#action-switch">switchTemplate</a>
+  <a href="#action-pulse">savePulseEntry</a>
+  <a href="#action-remix">remixSpace</a>
 </nav>
 
 <!-- ═══════════════ MAIN ═══════════════ -->
@@ -1088,6 +1095,191 @@
     <ul class="notes">
       <li>Returns <code>{ ok: true, templateSpec: TemplateSpec | null }</code>. Client updates <code>activeTemplateSpec</code> and <code>activeSpecOverride</code> state immediately.</li>
       <li>If the new template isn't in <code>space_templates</code> (e.g. it's a base template not yet seeded), <code>templateSpec</code> is null and <code>SpecRenderer</code> falls back to <code>BASE_TEMPLATE_SPECS</code>.</li>
+    </ul>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══ ENGAGEMENT ROUTES ══ -->
+  <h2 class="group-label">Engagement &amp; Retention — Phase 2–6</h2>
+
+  <!-- Tab navigation -->
+  <div class="route-section" id="username-tabs">
+    <div class="route-header">
+      <span class="route-path">/:username?tab=journal|companion</span>
+      <span class="tag tag-mixed">Client Component · URL-driven</span>
+    </div>
+    <p class="route-desc">
+      The <code>/:username</code> page renders three tabs controlled by the <code>?tab=</code> search param. Default is <code>space</code>. Tab state is in the URL so shared links can open a specific tab directly.
+    </p>
+    <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <span><strong>Next.js 15:</strong> <code>useSearchParams()</code> in a Client Component requires a <code>&lt;Suspense&gt;</code> boundary. <code>TabNav</code> is wrapped in <code>&lt;Suspense fallback={&lt;TabNavSkeleton /&gt;}&gt;</code> in SpaceView. Without it, Next.js 15 throws a build error.</span>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="dot" style="color:var(--accent2)"></span>Tab contents</div>
+      <table>
+        <thead><tr><th>Tab</th><th>Visible to</th><th>Content</th></tr></thead>
+        <tbody>
+          <tr><td><code>?tab=space</code> (default)</td><td>All</td><td>SpecRenderer with sections — the existing visual space</td></tr>
+          <tr><td><code>?tab=journal</code></td><td>All (if owner has entries)</td><td>Daily Pulse timeline, AI letters, snapshot timeline</td></tr>
+          <tr><td><code>?tab=companion</code></td><td>Owner only</td><td>Daily message, semantic quote, chat history + input</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="notes">
+      <li>Companion tab is hidden from visitors entirely — the tab button doesn't render and the URL param is ignored.</li>
+      <li>Journal tab only shows if owner has at least one pulse entry or AI letter.</li>
+    </ul>
+  </div>
+
+  <!-- /api/reactions -->
+  <div class="route-section" id="api-reactions">
+    <div class="route-header">
+      <span class="route-path">POST /api/reactions</span>
+      <span class="tag tag-api">API Route</span>
+    </div>
+    <p class="route-desc">Visitor knock submission. Three types: <code>message</code> (text), <code>energy</code> (one-tap, no text), <code>goal_cheer</code> (targets a specific goal). Rate limited to 3/space/IP/hour. IP is never stored — only <code>SHA256(ip + space_id)</code>.</p>
+    <div class="callout callout-info">
+      <span class="callout-icon">ℹ</span>
+      <span><strong>DB-based rate limiting:</strong> <code>SELECT COUNT(*)</code> from <code>reactions</code> WHERE ip_hash + space_id + created_at &gt; 1 hour ago. In-memory maps don't work in Vercel serverless (each instance has empty state). No new table needed.</span>
+    </div>
+    <div class="card">
+      <div class="card-head">Request body</div>
+      <pre>{ space_id: string, type: 'message'|'energy'|'goal_cheer',
+  message?: string,   <span class="c">// required for message/goal_cheer</span>
+  goal_id?: string }  <span class="c">// required for goal_cheer</span></pre>
+    </div>
+    <ul class="notes">
+      <li>Returns 201 on success, 429 on rate limit, 400 on missing required fields.</li>
+      <li>Failure mode: if the rate-limit DB query times out, fail open (allow the knock) — don't reject legitimate visitors for a slow query.</li>
+    </ul>
+  </div>
+
+  <!-- /api/pulse -->
+  <div class="route-section" id="api-pulse">
+    <div class="route-header">
+      <span class="route-path">GET /api/pulse</span>
+      <span class="tag tag-api">API Route</span>
+    </div>
+    <p class="route-desc">Returns daily pulse entries for the Journal tab plus a streak count. Query param: <code>?space_id=xxx&amp;limit=30</code>.</p>
+    <div class="callout callout-info">
+      <span class="callout-icon">ℹ</span>
+      <span><strong>Streak logic:</strong> Scans <code>daily_pulse_entries</code> backwards from <strong>yesterday</strong> (not today), max 365 rows. Today is always "in progress" — the streak never resets before the user has had a chance to log. This is the Duolingo / GitHub / Notion pattern that prevents morning-anxiety (streak showing 0 before logging).</span>
+    </div>
+    <div class="card">
+      <div class="card-head">Response shape</div>
+      <pre>{ entries: DailyPulseEntry[], streak: number, today_logged: boolean }</pre>
+    </div>
+  </div>
+
+  <!-- /api/companion/* -->
+  <div class="route-section" id="api-companion">
+    <div class="route-header">
+      <span class="route-path">/api/companion/daily &amp; /api/companion/chat</span>
+      <span class="tag tag-api">API Routes</span>
+    </div>
+    <p class="route-desc">Two companion endpoints. The daily message is free and cached; the chat costs 0.1 credits per exchange.</p>
+    <div class="card">
+      <div class="card-head"><span class="dot" style="color:var(--green)"></span>GET /api/companion/daily</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot info">1</div>
+          <div class="flow-text"><strong>Check cache</strong> — SELECT from <code>companion_daily</code> WHERE <code>(space_id, today)</code>. Cache hit → return immediately.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">2</div>
+          <div class="flow-text"><strong>Build context</strong> — assemble archetype tone, goals, habits, focus hero, last 7 pulse entries, reading list, mood+vibes (~600 tokens).</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">3</div>
+          <div class="flow-text"><strong>Claude Haiku</strong> → 3–5 sentence message + pgvector quote match.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot ok">4</div>
+          <div class="flow-text"><strong>Cache + return</strong> — INSERT into <code>companion_daily</code>, return message + quote.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot err">!</div>
+          <div class="flow-text"><strong>Claude 529 / error</strong> — return a fallback archetype greeting. Never 500 on companion failure.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="dot" style="color:var(--orange)"></span>POST /api/companion/chat</div>
+      <ul class="notes">
+        <li>Auth required. Deducts 0.1 credits via <code>deduct_credits(action='companion_chat')</code> before calling Claude. Returns 402 if insufficient balance — no wasted API tokens.</li>
+        <li>Streams SSE response (same pattern as <code>/api/generate</code>). Appends <code>user</code> + <code>assistant</code> rows to <code>companion_interactions</code>.</li>
+        <li>Context is the same as the daily message assembly. Full space context on every chat turn.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- /api/unsubscribe -->
+  <div class="route-section" id="api-unsubscribe">
+    <div class="route-header">
+      <span class="route-path">GET /api/unsubscribe</span>
+      <span class="tag tag-api">API Route · No auth required</span>
+    </div>
+    <p class="route-desc">One-click email opt-out. Validates a time-limited HMAC-SHA256 token embedded in the weekly digest email. Sets <code>profiles.email_digest_opted_out = true</code>. No login required. Invalid or expired tokens return 400 without opting out.</p>
+    <div class="card">
+      <div class="card-head">Token structure</div>
+      <pre>HMAC-SHA256(user_id + ":" + expiry_unix_ts, RESEND_SIGNING_SECRET)
+<span class="c">// URL: /api/unsubscribe?token=xxx&uid=yyy&exp=zzz</span></pre>
+    </div>
+  </div>
+
+  <!-- /api/cron/* -->
+  <div class="route-section" id="api-cron">
+    <div class="route-header">
+      <span class="route-path">/api/cron/*</span>
+      <span class="tag tag-api">Vercel Cron Routes · Service role key required</span>
+    </div>
+    <p class="route-desc">Three cron routes. All require <code>Authorization: Bearer &lt;CRON_SECRET&gt;</code> header to prevent public triggering.</p>
+    <div class="card">
+      <div class="card-head">Cron schedule</div>
+      <table>
+        <thead><tr><th>Route</th><th>Schedule</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>POST /api/cron/weekly-digest</code></td><td>Sunday 18:00 UTC</td><td>Sends weekly email digest to owners with new knocks or 5+ days inactive. Respects <code>email_digest_opted_out</code>. Logs failed sends for retry next week.</td></tr>
+          <tr><td><code>POST /api/cron/monthly-snapshot</code></td><td>1st of month 00:01 UTC</td><td>Copies <code>content_json</code> to <code>space_snapshots</code>. Batches 100 spaces per iteration using <code>WHERE NOT EXISTS</code> cursor — idempotent, timeout-safe (Vercel 300s limit).</td></tr>
+          <tr><td><code>POST /api/cron/monthly-letter</code></td><td>2nd of month 00:01 UTC</td><td>Diffs current vs previous snapshot, Claude writes a 5-sentence personal letter, stores as <code>daily_pulse_entries</code> row with <code>period='ai_letter'</code>, sends via Resend. Skips if no prior snapshot (user's first month).</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <span><strong>Failure modes:</strong> Resend rate limit mid-batch silently skips remaining emails — log each failure, retry next week. Claude API 529 during letter generation should be caught and retried the following day, not left as a permanent miss.</span>
+    </div>
+  </div>
+
+  <!-- savePulseEntry -->
+  <div class="route-section" id="action-pulse">
+    <div class="route-header">
+      <span class="route-path">savePulseEntry(spaceId, date, period, body)</span>
+      <span class="tag tag-action">Server Action</span>
+      <span class="tag tag-auth">Auth required</span>
+    </div>
+    <p class="route-desc">Upserts a morning or evening pulse entry. Free — no credit cost. Daily ritual must never cost credits.</p>
+    <ul class="notes">
+      <li>Uses <code>INSERT ... ON CONFLICT (space_id, entry_date, period) DO UPDATE SET body = EXCLUDED.body</code> — safe to call multiple times for the same slot.</li>
+      <li>Body max 280 chars enforced by DB check constraint.</li>
+      <li>Clock skew edge case: if user saves at 23:59:59 and hits server at 00:00:01, the date param (sent from client) is used, not server time.</li>
+    </ul>
+  </div>
+
+  <!-- remixSpace -->
+  <div class="route-section" id="action-remix">
+    <div class="route-header">
+      <span class="route-path">remixSpace(sourceSpaceId)</span>
+      <span class="tag tag-action">Server Action</span>
+      <span class="tag tag-auth">Auth required</span>
+    </div>
+    <p class="route-desc">Copies a public space's template configuration (template_id, spec_override) to the logged-in user's primary space. Content is never copied. Free — acquisition mechanic.</p>
+    <ul class="notes">
+      <li>Reads <code>design_tokens.template_id</code> and <code>design_tokens.spec_override</code> from source space. Verifies source is <code>visibility='public'</code> before copying.</li>
+      <li>Increments <code>remix_count</code> on source space. Optionally sets <code>design_tokens.remixed_from_username</code> on target for lineage credit.</li>
+      <li>Does NOT copy palette, mood, or content_json — only the layout/decoration spec.</li>
     </ul>
   </div>
 

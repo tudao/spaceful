@@ -17,8 +17,8 @@
 ## Route tree
 
 ```
-/                          (marketing)/page.tsx        — landing, gallery-as-hero
-/gallery                   (marketing)/gallery/page.tsx — public gallery, tag filter in URL
+/                          (marketing)/page.tsx        — landing, gallery-as-hero + Space of the Week
+/gallery                   (marketing)/gallery/page.tsx — public gallery, mood + tag filter in URL
 
 /login                     (auth)/login/page.tsx
 /signup                    (auth)/signup/page.tsx
@@ -28,12 +28,28 @@
 /onboard                   (app)/onboard/page.tsx       — no app nav, immersive 5-step flow
 /account/credits           (app)/account/credits/page.tsx
 
-/admin                     (admin)/admin/page.tsx       — admin role check
+/admin                     (admin)/admin/page.tsx       — admin role check, Space of the Week button
 /admin/templates           (admin)/admin/templates/page.tsx — spec editor + live preview
 /admin/moderation          (admin)/admin/moderation/page.tsx
 
 /:username                 [username]/page.tsx          — primary space (is_primary = true)
+/:username?tab=journal     [username]/page.tsx          — Journal tab: pulse timeline, AI letters
+/:username?tab=companion   [username]/page.tsx          — Companion tab (owner only)
+/:username?tab=journal&view=timeline  — Space evolution timeline (owner only)
 /:username/:slug           [username]/[slug]/page.tsx   — secondary spaces
+```
+
+**API routes:**
+
+```
+POST /api/reactions          — visitor knock submission (message / energy / goal_cheer)
+GET  /api/pulse              — pulse entries + streak for Journal tab
+GET  /api/companion/daily    — today's cached companion message (lazy-generate if missing)
+POST /api/companion/chat     — on-demand companion chat (SSE stream, 0.1 credits)
+POST /api/cron/weekly-digest — weekly email digest (Vercel Cron, Sunday 18:00 UTC)
+POST /api/cron/monthly-snapshot — monthly content_json snapshot (1st of month, 00:01 UTC)
+POST /api/cron/monthly-letter   — monthly AI letter generation (2nd of month)
+GET  /api/unsubscribe        — one-click email opt-out via signed HMAC token
 ```
 
 ---
@@ -236,9 +252,69 @@ Two token namespaces:
 - `--app-*` — app chrome (nav, modals, buttons, backgrounds outside the space)
 - `--sp-*` — per-space theme (injected as inline vars by SpecRenderer from the resolved palette)
 
-Space tokens: `--sp-bg`, `--sp-bg2`, `--sp-surface`, `--sp-accent`, `--sp-accent2`, `--sp-text`, `--sp-text2`, `--sp-muted`, `--sp-border`, `--sp-glow`, `--sp-chip-bg`, `--sp-done-bg`
+Space tokens: `--sp-bg`, `--sp-bg2`, `--sp-surface`, `--sp-accent`, `--sp-accent2`, `--sp-text`, `--sp-text2`, `--sp-muted`, `--sp-border`, `--sp-glow`, `--sp-chip-bg`, `--sp-done-bg`, `--sp-anim-speed`
+
+`--sp-anim-speed` — injected by SpecRenderer as `1.0` daytime, `0.65` evenings (19:00+) and late night (before 05:00). All header animation durations reference `calc(Ns / var(--sp-anim-speed, 1))`. Decorations slow down at night without any component changes.
 
 ---
+
+## Engagement & Retention System
+
+The engagement layer is built on four behavioral mechanics: **trigger** (time-aware state, weekly email), **simplest action** (2-sentence morning intention), **variable reward** (companion message, AI letter), and **investment** (content that compounds into a private life record).
+
+### Tab Navigation
+
+`/:username` renders three tabs via URL search param (`?tab=`):
+
+```
+[  Space  ]  [  Journal  ]  [  Companion  ]
+ Default       Pulse timeline  AI advisor
+               AI letters      Chat history
+               Snapshots
+```
+
+`useSearchParams()` requires a `<Suspense>` boundary in Next.js 15 App Router. `TabNav` is wrapped in `<Suspense fallback={<TabNavSkeleton />}>` in SpaceView.
+
+### Daily Pulse
+
+New section type (`daily_pulse`) in the section registry. Two render modes:
+- **Quick entry** (Space tab): shows today's morning/evening prompts only
+- **Full timeline** (Journal tab): all entries chronologically, newest first, with AI letters pinned
+
+Streak scans `daily_pulse_entries` backwards from **yesterday**, max 365 rows. Today is always "in progress" — prevents morning-anxiety bug (streak showing 0 before user has logged).
+
+### Space Companion
+
+Five archetypes (stoic / coach / poet / sage / challenger) inferred from mood + vibes at onboarding. Stored in `design_tokens.companion_archetype`.
+
+Context assembly (server-side, ~600 tokens):
+- Archetype tone instructions
+- Current goals + completion status
+- Habit completion rate this week
+- Focus hero title
+- Last 7 pulse entries (truncated to 100 chars each)
+- Reading list titles
+- Mood + vibes
+
+**Daily message**: lazy-generated on first visit of the day. `GET /api/companion/daily` checks `companion_daily` table for `(space_id, today)`. Cache hit = instant. Cache miss = Claude Haiku generation (~2s) + cache. Free. Loading skeleton shown during generation.
+
+**Chat**: `POST /api/companion/chat` streams SSE response (same pattern as `/api/generate`). Costs 0.1 credits via `deduct_credits(action='companion_chat')`.
+
+**Semantic quote**: pgvector similarity search against `quotes` table. Goal text embedded at request time, `ORDER BY embedding <-> $goal_embedding LIMIT 1`. Prevents keyword-matching errors (e.g. "movement" matching political-movement quotes instead of physical-recovery quotes).
+
+### Visitor Knocks
+
+Three types: `message` (text), `energy` (one-tap, no text), `goal_cheer` (targets a specific goal). Rate limiting is DB-based via `SELECT COUNT(*)` on the `reactions` table — in-memory maps don't survive Vercel serverless instances.
+
+Weekly digest email (Resend, Sunday 18:00 UTC) summarises new knocks and space stats. Opt-out stored in `profiles.email_digest_opted_out`; unsubscribe link uses HMAC-signed token, no login required.
+
+### Monthly AI Letter
+
+On the 2nd of each month, Claude reads the diff between last month's `space_snapshots` row and this month's, then writes a warm 5-sentence letter referencing actual data (goals completed, habit rate change, notepad themes). Stored as a `daily_pulse_entries` row with `period = 'ai_letter'` and delivered via Resend. Snapshot cron (1st of month) batches 100 spaces per iteration using `WHERE NOT EXISTS` cursor — idempotent, timeout-safe.
+
+### Remix Gallery
+
+Gallery replaced from mock data to real DB queries. Mood + vibe filter. One-click Remix copies `template_id + spec_override` to viewer's space (content_json untouched). `remix_count` incremented on source space. Space of the Week featured on landing page with Claude-generated spotlight text.
 
 ## Admin
 
@@ -249,6 +325,35 @@ Space tokens: `--sp-bg`, `--sp-bg2`, `--sp-surface`, `--sp-accent`, `--sp-accent
 - **`/admin`** — platform settings and stats.
 
 ---
+
+## Component Registry (additions)
+
+```
+src/components/space/
+  TabNav.tsx              — tab bar (Space / Journal / Companion), URL-driven
+  JournalTab.tsx          — full pulse timeline + AI letters + snapshot timeline
+  CompanionTab.tsx        — daily message, semantic quote, chat input, interaction history
+  TimelineView.tsx        — horizontal scroll of monthly snapshot cards
+
+src/app/api/
+  reactions/route.ts      — POST: knock submission with DB rate limiting
+  pulse/route.ts          — GET: pulse entries + streak calculation
+  companion/
+    daily/route.ts        — GET: lazy companion daily message (cache hit/miss)
+    chat/route.ts         — POST: SSE companion chat (0.1 credits)
+  cron/
+    weekly-digest/route.ts   — weekly email digest
+    monthly-snapshot/route.ts — monthly content_json snapshot (batched)
+    monthly-letter/route.ts  — monthly AI letter generation
+  unsubscribe/route.ts    — one-click email opt-out via HMAC token
+
+emails/
+  WeeklyDigest.tsx        — React Email template: knocks + space stats
+  MonthlyLetter.tsx       — React Email template: AI letter delivery
+
+src/data/
+  quotes.json             — ~300 curated quotes seeded into quotes table
+```
 
 ## Key Conventions
 

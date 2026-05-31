@@ -8,16 +8,21 @@ Postgres via Supabase. All tables have RLS enabled. Credit mutations go through 
 
 ```
 auth.users (Supabase managed)
-  └── profiles          — one row per user, holds balance + subscription state
-  └── spaces            — one or more spaces per user
-        └── reactions         — visitor messages on a space
-        └── moderation_items  — gallery submission queue entry (unique per space)
-        └── content_reports   — flagged content
-        └── prompt_log        — AI journaling prompts shown + accepted flag
-  └── credit_transactions — immutable ledger (append-only)
-  └── login_history       — last 30 logins per user (country only)
+  └── profiles              — one row per user, holds balance + subscription state
+  └── spaces                — one or more spaces per user
+        └── reactions             — visitor knocks on a space (message / energy / goal_cheer)
+        └── moderation_items      — gallery submission queue entry (unique per space)
+        └── content_reports       — flagged content
+        └── prompt_log            — AI journaling prompts shown + accepted flag
+        └── daily_pulse_entries   — morning/evening micro-journal + AI letters
+        └── companion_daily       — cached daily companion message (one per space per day)
+        └── companion_interactions— companion chat history
+        └── space_snapshots       — monthly content_json snapshots
+  └── credit_transactions   — immutable ledger (append-only)
+  └── login_history         — last 30 logins per user (country only)
 
 space_templates           — spec-driven templates, admin-managed
+quotes                    — curated quotes with pgvector embeddings for semantic matching
 platform_settings         — singleton feature-flag row (id = 1)
 prompt_templates          — versioned AI prompt strings
 username_blocklist        — reserved/banned usernames
@@ -45,6 +50,7 @@ Extends `auth.users`. One row per user created by the `handle_new_user` trigger.
 | `credit_balance` | numeric(6,2) | `>= 0`, never go negative |
 | `credits_monthly_cap` | int | default 40 — subscription rollover ceiling |
 | `credits_expiry_at` | timestamptz | set 90 days after subscription cancel |
+| `email_digest_opted_out` | bool | default false — set via signed unsubscribe link, GDPR/CAN-SPAM |
 | `created_at` / `updated_at` | timestamptz | `updated_at` maintained by trigger |
 
 **On signup:** `handle_new_user` trigger inserts a profile row with `credit_balance = 3` and writes a `signup_gift` ledger entry.
@@ -69,6 +75,8 @@ One or more spaces per user. The primary space (`is_primary = true`) is served a
 | `og_image_url` | text | |
 | `is_primary` | bool | partial unique index — one primary per user |
 | `reactions_enabled` | bool | default true |
+| `gallery_featured_at` | timestamptz | set by admin to feature space in gallery |
+| `remix_count` | int | incremented each time another user remixes this layout |
 | `published_at` | timestamptz | |
 
 **`design_tokens` shape:**
@@ -79,6 +87,8 @@ One or more spaces per user. The primary space (`is_primary = true`) is served a
   "animation_level": "none" | "subtle" | "full",
   "template_id": "garden",
   "spec_override": { ...TemplateSpecOverride... },
+  "companion_archetype": "stoic" | "coach" | "poet" | "sage" | "challenger",
+  "remixed_from_username": "...",
   "palette": { "bg", "bg2", "surface", "accent", "accent2", "text", "text2", "glow" },
   "tagline": "...",
   "hero_title_placeholder": "...",
@@ -149,18 +159,114 @@ Spec-driven templates stored in the DB. Admins create and edit these via `/admin
 
 ---
 
-### `reactions`
+### `reactions` (Visitor Knocks)
 
-Visitor messages left on a space. Rate-limited server-side (3 per space per IP per hour — not in RLS). IP is never stored raw; `visitor_ip_hash` is `SHA256(ip + space_id)`.
+Visitor knocks on a space. Three types. Rate-limited server-side via DB count query (3 per space per IP per hour — DB-based, not in-memory, for serverless correctness). IP is never stored raw; `visitor_ip_hash` is `SHA256(ip + space_id)`.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
 | `space_id` | uuid FK → spaces | cascade delete |
-| `visitor_ip_hash` | text | SHA256(ip + space_id) |
-| `message` | text | 1–140 chars |
+| `type` | text | `message` / `energy` / `goal_cheer`; default `message` |
+| `goal_id` | uuid FK → spaces | nullable; set for `goal_cheer` type |
+| `visitor_ip_hash` | text | SHA256(ip + space_id) — raw IP never stored |
+| `message` | text | 1–140 chars; optional for `energy` type |
 | `is_visible` | bool | default false — owner approves visibility |
 | `created_at` | timestamptz | |
+
+Migration: `003_knocks.sql`
+
+---
+
+### `daily_pulse_entries`
+
+Morning/evening micro-journal entries. Also used for AI letters (`period = 'ai_letter'`). Free to write — never costs credits.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `space_id` | uuid FK → spaces | cascade delete |
+| `user_id` | uuid FK → auth.users | cascade delete |
+| `entry_date` | date | |
+| `period` | text | `morning` / `evening` / `ai_letter` |
+| `body` | text | max 280 chars (AI letters are longer) |
+| `created_at` | timestamptz | |
+| UNIQUE | `(space_id, entry_date, period)` | one entry per slot |
+
+Streak calculation: server-side, scanning backwards from **yesterday** max 365 rows. Today is always "in progress" — never resets streak before user has logged.
+
+Migration: `004_daily_pulse.sql`
+
+---
+
+### `companion_daily`
+
+Cached daily companion messages. Generated lazily on first visit of the day; subsequent reads are instant.
+
+| Column | Type | Notes |
+|---|---|---|
+| `space_id` | uuid FK → spaces | cascade delete |
+| `date` | date | |
+| `archetype` | text | companion archetype at generation time |
+| `message` | text | 3–5 sentence companion message |
+| `quote_text` | text | semantic-matched quote body |
+| `quote_attr` | text | quote attribution |
+| PK | `(space_id, date)` | one message per space per day |
+
+RLS: owner-only. Visitors never see companion content.
+
+---
+
+### `companion_interactions`
+
+On-demand companion chat history. Last 20 shown in UI.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `space_id` | uuid FK → spaces | cascade delete |
+| `user_id` | uuid FK → auth.users | cascade delete |
+| `role` | text | `user` / `assistant` |
+| `body` | text | |
+| `created_at` | timestamptz | |
+
+Each user exchange costs 0.1 credits via `deduct_credits(action='companion_chat')`.
+
+Migration: `005_companion.sql` (also adds `companion_chat` to `action_type` enum)
+
+---
+
+### `quotes`
+
+Curated quote library with pgvector embeddings for semantic goal-text matching.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `text` | text | quote body |
+| `attribution` | text | author / source |
+| `themes` | text[] | manual tags (resilience, rest, consistency, etc.) |
+| `embedding` | vector(1536) | pre-computed embedding, `ivfflat` index |
+
+Seeded from `src/data/quotes.json` at migration time (~300 quotes). At runtime, user goal text is embedded and nearest-neighbour matched via `ORDER BY embedding <-> $goal_embedding LIMIT 1`.
+
+---
+
+### `space_snapshots`
+
+Monthly content_json snapshots used for AI letter diff generation.
+
+| Column | Type | Notes |
+|---|---|---|
+| `space_id` | uuid FK → spaces | cascade delete |
+| `user_id` | uuid FK → auth.users | cascade delete |
+| `snapshot_at` | date | |
+| `content_json` | jsonb | full content at snapshot time |
+| PK | `(space_id, snapshot_at)` | one snapshot per space per month |
+
+Cron runs 1st of each month (Vercel Cron 00:01 UTC). Batched 100 spaces per iteration using `WHERE NOT EXISTS` cursor — idempotent by design.
+
+Migration: `006_snapshots.sql`
 
 ---
 
@@ -207,6 +313,8 @@ Reserved and banned usernames. Public read so client-side validation can block t
 ## RPCs
 
 All credit mutations go through these RPCs using the **service role** key. They are `SECURITY DEFINER` functions — client code must never bypass them with direct `UPDATE`.
+
+Valid `action_type` enum values: `signup_gift`, `subscription_renewal`, `purchase`, `generation`, `regeneration`, `prompt`, `og_regen`, `bonus_admin`, `refund`, **`companion_chat`** (added in migration 005).
 
 ### `deduct_credits(p_user_id, p_delta, p_action, p_space_id?, p_note?)`
 
@@ -257,5 +365,9 @@ Adds credits up to `p_cap` (pass `credits_monthly_cap` for subscription renewals
 |---|---|
 | `001_schema.sql` | Full schema: enums, tables, triggers, RPCs, RLS, indexes |
 | `002_templates.sql` | `space_templates` table + RLS policies |
+| `003_knocks.sql` | Extend `reactions` table (type, goal_id); add `email_digest_opted_out` to profiles; add `gallery_featured_at` + `remix_count` to spaces; `/api/unsubscribe` route |
+| `004_daily_pulse.sql` | `daily_pulse_entries` table + RLS |
+| `005_companion.sql` | Add `companion_chat` to `action_type` enum; `companion_daily` table; `companion_interactions` table; `quotes` table with pgvector embedding column |
+| `006_snapshots.sql` | `space_snapshots` table + RLS |
 
 Apply locally with `pnpm db:reset`. Push to staging with `supabase db push`.
