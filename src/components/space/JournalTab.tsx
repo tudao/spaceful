@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface PulseEntry {
   id: string;
@@ -13,7 +14,6 @@ interface PulseEntry {
 
 interface JournalTabProps {
   spaceId: string;
-  username: string;
   palette: { bg: string; bg2: string; accent: string; text: string; text2: string; surface: string; border?: string; };
   streak: number;
 }
@@ -28,7 +28,9 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
-export function JournalTab({ spaceId, username, palette: p, streak }: JournalTabProps) {
+export function JournalTab({ spaceId, palette: p, streak }: JournalTabProps) {
+  const pathname = usePathname();
+  const basePath = pathname || '/';
   const [entries, setEntries] = useState<PulseEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,7 +60,7 @@ export function JournalTab({ spaceId, username, palette: p, streak }: JournalTab
             </div>
           )}
         </div>
-        <Link href={`/${username}?tab=journal&view=timeline`} style={{ fontSize: 13, fontWeight: 700, color: p.accent, textDecoration: 'none', padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${p.accent}44`, background: `${p.accent}12`, marginTop: 4 }}>
+        <Link href={`${basePath}?tab=journal&view=timeline`} style={{ fontSize: 13, fontWeight: 700, color: p.accent, textDecoration: 'none', padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${p.accent}44`, background: `${p.accent}12`, marginTop: 4 }}>
           📸 Evolution →
         </Link>
       </div>

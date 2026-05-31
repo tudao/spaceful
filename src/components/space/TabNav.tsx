@@ -1,21 +1,22 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 export type TabId = 'space' | 'journal' | 'companion';
 
 interface TabNavProps {
   activeTab: TabId;
-  username: string;
   hasJournal: boolean;
   isOwner: boolean;
 }
 
-export function TabNav({ activeTab, username, hasJournal, isOwner }: TabNavProps) {
+export function TabNav({ activeTab, hasJournal, isOwner }: TabNavProps) {
+  const pathname = usePathname();
   const router = useRouter();
 
   function go(tab: TabId) {
-    const url = tab === 'space' ? `/${username}` : `/${username}?tab=${tab}`;
+    const basePath = pathname || '/';
+    const url = tab === 'space' ? basePath : `${basePath}?tab=${tab}`;
     router.push(url);
   }
 

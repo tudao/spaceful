@@ -269,7 +269,6 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, isLogge
       {activeTab === 'journal' && activeView !== 'timeline' && (
         <JournalTab
           spaceId={space.id}
-          username={username}
           palette={{ bg: palette.bg, bg2: palette.bg2, accent: palette.accent, text: palette.text, text2: palette.text2, surface: palette.surface }}
           streak={pulseStreak}
         />
@@ -291,7 +290,6 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, isLogge
 
       <TabNav
         activeTab={activeTab}
-        username={username}
         hasJournal={hasJournal || isOwner}
         isOwner={isOwner}
       />
