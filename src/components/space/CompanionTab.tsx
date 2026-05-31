@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Send } from 'lucide-react';
 
 interface Quote {
@@ -32,6 +32,114 @@ const ARCHETYPE_LABELS: Record<string, string> = {
   sage:       'The Sage',
   challenger: 'The Challenger',
 };
+
+function normalizeCompanionMarkdown(content: string) {
+  return content
+    .replace(/\r\n/g, '\n')
+    .replace(/^(#{1,6}\s+[^\n*]+)\s+(\*\*)/, '$1\n\n$2');
+}
+
+function renderInlineMarkdown(text: string, keyPrefix: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  let key = 0;
+
+  while (cursor < text.length) {
+    const boldStart = text.indexOf('**', cursor);
+    const italicStart = text.indexOf('*', cursor);
+    const nextStart = [boldStart, italicStart]
+      .filter(index => index >= 0)
+      .sort((a, b) => a - b)[0];
+
+    if (nextStart === undefined) {
+      nodes.push(text.slice(cursor));
+      break;
+    }
+
+    if (nextStart > cursor) nodes.push(text.slice(cursor, nextStart));
+
+    if (text.startsWith('**', nextStart)) {
+      const end = text.indexOf('**', nextStart + 2);
+      if (end === -1) {
+        nodes.push(text.slice(nextStart));
+        break;
+      }
+      nodes.push(
+        <strong key={`${keyPrefix}-strong-${key++}`} style={{ fontWeight: 800 }}>
+          {renderInlineMarkdown(text.slice(nextStart + 2, end), `${keyPrefix}-strong-${key}`)}
+        </strong>
+      );
+      cursor = end + 2;
+      continue;
+    }
+
+    const end = text.indexOf('*', nextStart + 1);
+    if (end === -1) {
+      nodes.push(text.slice(nextStart));
+      break;
+    }
+    nodes.push(
+      <em key={`${keyPrefix}-em-${key++}`} style={{ fontStyle: 'italic' }}>
+        {renderInlineMarkdown(text.slice(nextStart + 1, end), `${keyPrefix}-em-${key}`)}
+      </em>
+    );
+    cursor = end + 1;
+  }
+
+  return nodes;
+}
+
+function MarkdownText({ content, italic = false }: { content: string; italic?: boolean }) {
+  const blocks = normalizeCompanionMarkdown(content)
+    .split(/\n{2,}/)
+    .map(block => block.trim())
+    .filter(Boolean);
+
+  if (blocks.length === 0) return null;
+
+  return (
+    <>
+      {blocks.map((block, blockIndex) => {
+        const heading = /^(#{1,6})\s+(.+)$/.exec(block);
+        if (heading) {
+          return (
+            <h3 key={blockIndex} style={{ fontSize: 16, lineHeight: 1.35, fontWeight: 900, margin: blockIndex === 0 ? '0 0 8px' : '14px 0 8px' }}>
+              {renderInlineMarkdown(heading[2], `heading-${blockIndex}`)}
+            </h3>
+          );
+        }
+
+        const lines = block.split('\n').filter(Boolean);
+        const listItems = lines
+          .map(line => /^[-*]\s+(.+)$/.exec(line.trim()))
+          .filter((match): match is RegExpExecArray => Boolean(match));
+
+        if (listItems.length > 0 && listItems.length === lines.length) {
+          return (
+            <ul key={blockIndex} style={{ margin: blockIndex === 0 ? 0 : '10px 0 0', paddingLeft: 18 }}>
+              {listItems.map((item, itemIndex) => (
+                <li key={itemIndex} style={{ marginBottom: itemIndex === listItems.length - 1 ? 0 : 6 }}>
+                  {renderInlineMarkdown(item[1], `li-${blockIndex}-${itemIndex}`)}
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <p key={blockIndex} style={{ margin: blockIndex === 0 ? 0 : '10px 0 0', fontStyle: italic ? 'italic' : undefined }}>
+            {block.split('\n').map((line, lineIndex) => (
+              <Fragment key={lineIndex}>
+                {lineIndex > 0 && <br />}
+                {renderInlineMarkdown(line, `p-${blockIndex}-${lineIndex}`)}
+              </Fragment>
+            ))}
+          </p>
+        );
+      })}
+    </>
+  );
+}
 
 export function CompanionTab({ spaceId, palette: p }: CompanionTabProps) {
   const [daily, setDaily]     = useState<DailyData | null>(null);
@@ -142,7 +250,9 @@ export function CompanionTab({ spaceId, palette: p }: CompanionTabProps) {
       )}
       {!loading && daily && (
         <div style={{ background: p.surface, borderRadius: 20, padding: '20px 22px', marginBottom: 20, border }}>
-          <p style={{ fontSize: 15, lineHeight: 1.75, margin: 0, color: p.text, fontStyle: 'italic' }}>{daily.message}</p>
+          <div style={{ fontSize: 15, lineHeight: 1.75, margin: 0, color: p.text }}>
+            <MarkdownText content={daily.message} italic />
+          </div>
         </div>
       )}
 
@@ -169,7 +279,9 @@ export function CompanionTab({ spaceId, palette: p }: CompanionTabProps) {
               border: msg.role === 'assistant' ? border : 'none',
               opacity: msg.streaming && !msg.content ? 0.5 : 1,
             }}>
-              {msg.content || (msg.streaming ? '…' : '')}
+              {msg.role === 'assistant'
+                ? <MarkdownText content={msg.content || (msg.streaming ? '...' : '')} />
+                : msg.content}
             </div>
           </div>
         ))}
