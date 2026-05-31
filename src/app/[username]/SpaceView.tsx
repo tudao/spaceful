@@ -207,7 +207,7 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
       />
 
       {!isOwner && space.reactions_enabled && (
-        <ReactionForm username={username} spaceId={space.id} />
+        <ReactionForm username={username} spaceId={space.id} goals={localContent.goals} />
       )}
 
       {isOwner && (
