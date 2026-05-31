@@ -7,23 +7,33 @@ alter type credit_action add value if not exists 'daily_login';
 alter table profiles
   add column if not exists last_daily_credit_at date;
 
--- Update signup gift from 3 → 30 in the trigger
+-- Add credit amount columns to existing platform_settings singleton (id=1)
+alter table platform_settings
+  add column if not exists companion_credit_cost    numeric(6,2) not null default 1,
+  add column if not exists daily_login_credits      numeric(6,2) not null default 10,
+  add column if not exists generation_credit_cost   numeric(6,2) not null default 30,
+  add column if not exists regeneration_credit_cost numeric(6,2) not null default 20,
+  add column if not exists signup_gift_credits      numeric(6,2) not null default 30;
+
+-- Update signup gift from 3 → 30 in the trigger (reads from singleton row)
 create or replace function handle_new_user() returns trigger
   language plpgsql security definer set search_path = public
 as $$
 declare
   v_username text;
-  v_gift     int;
+  v_gift     numeric(6,2);
 begin
   v_username := coalesce(
     nullif(trim(new.raw_user_meta_data->>'username'), ''),
     split_part(new.email, '@', 1)
   );
 
-  select coalesce((value::int), 30)
+  select coalesce(signup_gift_credits, 30)
     into v_gift
     from platform_settings
-    where key = 'signup_gift_credits';
+    where id = 1;
+
+  v_gift := coalesce(v_gift, 30);
 
   insert into public.profiles (user_id, email, username, display_name, credit_balance)
   values (
@@ -38,23 +48,6 @@ begin
   return new;
 end;
 $$;
-
--- Platform settings table (admin-editable credit amounts)
-create table if not exists platform_settings (
-  key   text primary key,
-  value jsonb not null
-);
-alter table platform_settings enable row level security;
--- Only service role can read/write (admin routes use service client)
-create policy "service_only" on platform_settings using (false);
-
-insert into platform_settings (key, value) values
-  ('companion_credit_cost',    '1'),
-  ('daily_login_credits',      '10'),
-  ('generation_credit_cost',   '30'),
-  ('regeneration_credit_cost', '20'),
-  ('signup_gift_credits',      '30')
-on conflict (key) do nothing;
 
 -- Extend daily_pulse_entries period constraint to include weekly_synthesis
 alter table daily_pulse_entries

@@ -122,6 +122,14 @@
   <p><strong>Recommended fix:</strong> Move admin settings behind Supabase RLS checking a <code>is_admin</code> flag on profiles, and use the user's session cookie for auth instead of a shared secret.</p>
 </div>
 
+<h2>platform_settings — Singleton vs Key-Value</h2>
+
+<div class="section">
+  <h3><span class="tag deviation">Deviation</span> Credit columns added to existing singleton table, not a new key-value table</h3>
+  <p>Migration 007 originally created a new key-value <code>platform_settings(key text, value jsonb)</code> table. This conflicted with the existing singleton table from migration 001 which has schema <code>platform_settings(id int primary key default 1, gallery_enabled bool, ...)</code>.</p>
+  <p><strong>Fix:</strong> Added credit amount columns directly to the existing singleton table via <code>ALTER TABLE ... ADD COLUMN IF NOT EXISTS</code>. The <code>platform-settings.ts</code> lib queries <code>WHERE id = 1</code> and updates the same row. The admin settings page and API work identically — only the underlying DB pattern changed.</p>
+</div>
+
 <h2>Open Questions Summary</h2>
 <ul>
   <li>Stripe <code>stripe_customer_id</code> column missing from profiles — add in follow-up migration</li>
