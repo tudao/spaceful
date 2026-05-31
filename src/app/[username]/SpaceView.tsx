@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Lock, Sparkles } from 'lucide-react';
 import { type SpaceContent, type SpacePalette } from '@/components/space/SpacePage';
@@ -15,6 +16,8 @@ import { switchTemplate } from './switchTemplate';
 import { SpecRenderer } from '@/components/space/engine/SpecRenderer';
 import type { EngineTokens, TemplateSpec, TemplateSpecOverride } from '@/components/space/engine/types';
 import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
+import { TabNav, type TabId } from '@/components/space/TabNav';
+import { JournalTab } from '@/components/space/JournalTab';
 
 interface SpaceRow {
   id: string;
@@ -40,6 +43,14 @@ interface Props {
   reactions?: ReactionRow[];
   creditBalance?: number;
   templateSpec?: TemplateSpec | null;
+}
+
+// Reads ?tab= from URL — must be in a component wrapped by Suspense (Next.js 15 requirement)
+function TabReader({ onTab }: { onTab: (t: TabId) => void }) {
+  const sp = useSearchParams();
+  const tab = (sp.get('tab') ?? 'space') as TabId;
+  useEffect(() => { onTab(tab); }, [tab, onTab]);
+  return null;
 }
 
 function computeTimeState() {
@@ -114,6 +125,9 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
     space ? buildContent(space) : { title: '', goals: [] },
   );
   const [timeState, setTimeState] = useState(computeTimeState);
+  const [activeTab, setActiveTab] = useState<TabId>('space');
+  const [pulseStreak, setPulseStreak] = useState(0);
+  const [hasJournal, setHasJournal] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setTimeState(computeTimeState()), 60_000);
@@ -181,8 +195,15 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
     setRegenOpen(true);
   }
 
+  const palette = tokens.palette;
+
   return (
     <>
+      {/* Read ?tab= from URL; Suspense required in Next.js 15 for useSearchParams() */}
+      <Suspense fallback={null}>
+        <TabReader onTab={setActiveTab} />
+      </Suspense>
+
       {/* owner chrome overlay — works for all templates */}
       {isOwner && <OwnerChrome
         mode={mode}
@@ -192,23 +213,42 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, reactio
         onOpenSettings={() => setSettingsOpen(true)}
       />}
 
-      <SpecRenderer
-        content={localContent}
-        tokens={tokens}
-        spec={activeTemplateSpec ?? undefined}
-        isOwner={isOwner}
-        mode={mode}
-        onUpdate={(patch) => setLocalContent(c => ({ ...c, ...patch }))}
-        onSave={handleSave}
-        username={username}
-        greeting={timeState.greeting}
-        animSpeed={timeState.animSpeed}
-        nudgeDay={isOwner ? timeState.nudgeDay : null}
-      />
-
-      {!isOwner && space.reactions_enabled && (
-        <ReactionForm username={username} spaceId={space.id} goals={localContent.goals} />
+      {activeTab === 'space' && (
+        <>
+          <SpecRenderer
+            content={localContent}
+            tokens={tokens}
+            spec={activeTemplateSpec ?? undefined}
+            isOwner={isOwner}
+            mode={mode}
+            onUpdate={(patch) => setLocalContent(c => ({ ...c, ...patch }))}
+            onSave={handleSave}
+            username={username}
+            greeting={timeState.greeting}
+            animSpeed={timeState.animSpeed}
+            nudgeDay={isOwner ? timeState.nudgeDay : null}
+          />
+          {!isOwner && space.reactions_enabled && (
+            <ReactionForm username={username} spaceId={space.id} goals={localContent.goals} />
+          )}
+        </>
       )}
+
+      {activeTab === 'journal' && (
+        <JournalTab
+          spaceId={space.id}
+          username={username}
+          palette={{ bg: palette.bg, bg2: palette.bg2, accent: palette.accent, text: palette.text, text2: palette.text2, surface: palette.surface }}
+          streak={pulseStreak}
+        />
+      )}
+
+      <TabNav
+        activeTab={activeTab}
+        username={username}
+        hasJournal={hasJournal || isOwner}
+        isOwner={isOwner}
+      />
 
       {isOwner && (
         <SharePopover open={shareOpen} onClose={() => setShareOpen(false)} username={username} slug={space.slug} />

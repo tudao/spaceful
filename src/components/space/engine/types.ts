@@ -13,6 +13,7 @@ export const SECTION_IDS = [
   'streak',
   'quote',
   'photo',
+  'daily_pulse',
 ] as const;
 
 export const DECORATION_IDS = [

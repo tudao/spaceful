@@ -429,6 +429,58 @@ function PlaceholderSection({ styles }: SectionProps) {
   );
 }
 
+function DailyPulseSection({ content: _content, editing, onUpdate, styles }: SectionProps) {
+  const [morning, setMorning] = useState('');
+  const [evening, setEvening] = useState('');
+  const h = new Date().getHours();
+  const showMorning = h >= 5 && h < 13;
+  const showEvening = h >= 13;
+
+  async function save(period: 'morning' | 'evening', body: string) {
+    if (!body.trim()) return;
+    await fetch('/api/pulse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ period, body: body.trim(), entry_date: new Date().toISOString().slice(0, 10) }),
+    });
+    onUpdate({});
+  }
+
+  return (
+    <section style={{ ...styles.card, padding: '20px 22px' }}>
+      <div style={styles.label}>Daily pulse</div>
+      {showMorning && (
+        <div style={{ marginBottom: showEvening ? 14 : 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: styles.muted, marginBottom: 6 }}>☀️ Morning intention</div>
+          <textarea
+            value={morning}
+            onChange={e => setMorning(e.target.value)}
+            onBlur={() => save('morning', morning)}
+            placeholder="What's your intention for today?"
+            maxLength={280}
+            readOnly={!editing}
+            style={{ width: '100%', boxSizing: 'border-box', resize: 'none', background: 'var(--sp-chip-bg)', border: `1px solid ${styles.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, lineHeight: 1.65, color: 'var(--sp-text)', outline: 'none', minHeight: 48, fontFamily: "'Nunito',sans-serif" }}
+          />
+        </div>
+      )}
+      {showEvening && (
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: styles.muted, marginBottom: 6 }}>🌙 Evening reflection</div>
+          <textarea
+            value={evening}
+            onChange={e => setEvening(e.target.value)}
+            onBlur={() => save('evening', evening)}
+            placeholder="One thing you're proud of today."
+            maxLength={280}
+            readOnly={!editing}
+            style={{ width: '100%', boxSizing: 'border-box', resize: 'none', background: 'var(--sp-chip-bg)', border: `1px solid ${styles.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, lineHeight: 1.65, color: 'var(--sp-text)', outline: 'none', minHeight: 48, fontFamily: "'Nunito',sans-serif" }}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
 export const SECTIONS: Record<SectionId, React.ComponentType<SectionProps>> = {
   goals: GoalsSection,
   currently: CurrentlySection,
@@ -440,4 +492,5 @@ export const SECTIONS: Record<SectionId, React.ComponentType<SectionProps>> = {
   streak: StreakSection,
   quote: QuoteSection,
   photo: PhotoSection,
+  daily_pulse: DailyPulseSection,
 };
