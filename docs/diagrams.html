@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spaceful — Architecture, ER Diagram & Data Flows</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0f1117;
+  --bg2:     #161b27;
+  --surface: #1e2535;
+  --border:  #2a3347;
+  --text:    #e2e8f0;
+  --muted:   #7a8499;
+  --accent:  #7c6fe0;
+  --green:   #4ade80;
+  --orange:  #f59e0b;
+  --red:     #f87171;
+  --pink:    #f472b6;
+  --teal:    #2dd4bf;
+  --blue:    #60a5fa;
+  --nav-w:   230px;
+  --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ── */
+nav {
+  width: var(--nav-w);
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  overflow-y: auto;
+  padding: 0 0 40px;
+}
+
+.nav-logo {
+  padding: 20px 18px;
+  font-size: 15px;
+  font-weight: 800;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-logo-dot {
+  width: 20px; height: 20px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #9d7de8, #7c5cdb);
+  flex-shrink: 0;
+}
+
+.nav-group {
+  padding: 14px 18px 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+nav a {
+  display: block;
+  padding: 6px 18px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+  border-left: 2px solid transparent;
+  transition: all 0.12s;
+}
+
+nav a:hover { color: var(--text); }
+nav a.active { color: var(--text); border-left-color: var(--accent); background: rgba(124,111,224,0.08); }
+
+/* ── Main ── */
+main {
+  margin-left: var(--nav-w);
+  flex: 1;
+  padding: 48px 56px 100px;
+  max-width: 1160px;
+}
+
+h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+.subtitle { color: var(--muted); font-size: 14px; margin-bottom: 52px; }
+
+.section { margin-bottom: 80px; scroll-margin-top: 24px; }
+
+h2 {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 28px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+h3 {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.divider { height: 1px; background: var(--border); margin: 64px 0; }
+
+code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: #131825;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: #a5d8ff;
+}
+
+/* ═══════════════════════════════
+   ARCHITECTURE — Stack cards
+═══════════════════════════════ */
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 48px;
+}
+
+.stack-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.stack-card .layer {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.stack-card .tech {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.stack-card .detail {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.stack-card .dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════
+   ARCHITECTURE — Route group tree
+═══════════════════════════════ */
+.route-tree {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px 28px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  margin-bottom: 36px;
+}
+
+.tree-root { color: #c4b5fd; font-weight: 800; font-size: 13px; }
+.tree-group { color: var(--orange); }
+.tree-route { color: #a5d8ff; }
+.tree-label { color: var(--muted); }
+.tree-note  { color: #6272a4; font-style: italic; }
+.tree-server { color: var(--green); }
+.tree-client { color: var(--orange); }
+.tree-line { color: var(--border); }
+
+/* ═══════════════════════════════
+   ARCHITECTURE — Server/Client boundary
+═══════════════════════════════ */
+.boundary-diagram {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 36px;
+}
+
+.boundary-lane {
+  padding: 20px 22px;
+  background: var(--surface);
+}
+
+.boundary-lane.server { border-right: 2px solid var(--border); }
+
+.boundary-lane h4 {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lane-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.lane-badge.server { background: rgba(74,222,128,0.12); color: var(--green); }
+.lane-badge.client { background: rgba(245,158,11,0.12); color: var(--orange); }
+
+.boundary-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(42,51,71,0.6);
+  font-size: 13px;
+}
+
+.boundary-item:last-child { border-bottom: none; }
+
+.bi-name { font-weight: 700; color: var(--text); font-family: var(--mono); font-size: 12px; }
+.bi-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.bi-dot  { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+
+/* ═══════════════════════════════
+   ARCHITECTURE — Template engine tree
+═══════════════════════════════ */
+.engine-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 36px;
+}
+
+.engine-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.engine-box-head {
+  padding: 10px 14px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.engine-box-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.engine-item {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px;
+  border-radius: 5px;
+}
+
+.engine-item:hover { background: rgba(255,255,255,0.03); }
+
+.engine-item .alias {
+  font-size: 10px;
+  color: var(--muted);
+  margin-left: auto;
+  background: rgba(42,51,71,0.8);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* ═══════════════════════════════
+   ER DIAGRAM
+═══════════════════════════════ */
+.er-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  margin-bottom: 20px;
+}
+
+.er-container {
+  position: relative;
+  width: 1020px;
+  height: 790px;
+  margin: 0 auto;
+}
+
+.er-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.er-table {
+  position: absolute;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 11.5px;
+}
+
+.er-table-head {
+  padding: 7px 11px;
+  font-weight: 800;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.er-table-head .pk { font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: auto; }
+
+.er-table-body { padding: 4px 0; }
+
+.er-col {
+  padding: 3px 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.er-col.fk { color: #93c5fd; }
+.er-col.pk { color: #fde68a; }
+.er-col.important { color: #d1fae5; }
+
+.er-type {
+  margin-left: auto;
+  font-size: 9.5px;
+  color: #4b5680;
+}
+
+/* Standalone tables row */
+.er-standalone {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.er-standalone .er-table {
+  position: static;
+  width: 200px;
+}
+
+/* ER Legend */
+.er-legend {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 14px;
+}
+
+.er-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend-line {
+  width: 40px;
+  height: 2px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════
+   DATA FLOW SWIMLANES
+═══════════════════════════════ */
+.swimlane-wrap {
+  overflow-x: auto;
+  margin-bottom: 48px;
+}
+
+.swimlane {
+  display: grid;
+  grid-template-columns: 240px 300px 260px;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  min-width: 800px;
+}
+
+.sl-header {
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  border-bottom: 2px solid var(--border);
+}
+
+.sl-col {
+  border-right: 1px solid var(--border);
+}
+
+.sl-col:last-child { border-right: none; }
+
+.sl-browser .sl-header { background: rgba(96,165,250,0.1);  color: var(--blue);   border-bottom-color: rgba(96,165,250,0.3);  }
+.sl-server  .sl-header { background: rgba(74,222,128,0.08); color: var(--green);  border-bottom-color: rgba(74,222,128,0.25); }
+.sl-db      .sl-header { background: rgba(244,114,182,0.08);color: var(--pink);   border-bottom-color: rgba(244,114,182,0.25);}
+
+.sl-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 200px;
+  background: var(--surface);
+}
+
+.sl-step {
+  position: relative;
+  padding: 8px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  font-size: 12.5px;
+  line-height: 1.45;
+  margin-bottom: 6px;
+}
+
+.sl-step.empty {
+  border: none;
+  background: none;
+  height: 20px;
+  margin: 0;
+}
+
+.sl-step strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 2px; }
+.sl-step em { color: var(--muted); font-size: 11.5px; font-style: normal; }
+
+.sl-step.hl-blue   { border-color: rgba(96,165,250,0.4);  background: rgba(96,165,250,0.06);  }
+.sl-step.hl-green  { border-color: rgba(74,222,128,0.35); background: rgba(74,222,128,0.05);  }
+.sl-step.hl-orange { border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.06);  }
+.sl-step.hl-pink   { border-color: rgba(244,114,182,0.4); background: rgba(244,114,182,0.06); }
+.sl-step.hl-red    { border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.06); }
+.sl-step.hl-purple { border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.06); }
+
+.sl-arrow {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.sl-arrow .arr { color: var(--accent); font-size: 14px; }
+.sl-arrow.cross { color: var(--orange); }
+.sl-arrow.cross .arr { color: var(--orange); }
+
+/* cross-lane connector — spans full row using a separate row element */
+.sl-row {
+  display: contents;
+}
+
+/* row-spanning connector */
+.cross-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  min-height: 32px;
+  gap: 0;
+  font-size: 11.5px;
+}
+
+.cross-row .cr-line {
+  flex: 1;
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  margin: 0 4px;
+}
+
+.cross-row .cr-line.rev {
+  background: linear-gradient(270deg, var(--accent), transparent);
+}
+
+.cross-row .cr-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.cross-row .cr-arrow {
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+/* ═══════════════════════════════
+   CALLOUT
+═══════════════════════════════ */
+.callout {
+  display: flex;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.callout-warn { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); color: #fde68a; }
+.callout-info { background: rgba(124,111,224,0.08); border: 1px solid rgba(124,111,224,0.25); color: #c4b5fd; }
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <div class="nav-logo"><div class="nav-logo-dot"></div> Spaceful Diagrams</div>
+  <div class="nav-group">Architecture</div>
+  <a href="#stack">Tech Stack</a>
+  <a href="#route-groups">Route Groups</a>
+  <a href="#boundaries">Server / Client Boundaries</a>
+  <a href="#template-engine">Template Engine</a>
+  <div class="nav-group">Database</div>
+  <a href="#er-diagram">ER Diagram</a>
+  <div class="nav-group">Data Flows</div>
+  <a href="#flow-onboard">Onboarding → Publish</a>
+  <a href="#flow-render">Space Render Chain</a>
+  <a href="#flow-credits">Credit Deduction</a>
+  <a href="#flow-edit">Content Edit → Save</a>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main>
+<h1>Architecture, ER Diagram & Data Flows</h1>
+<p class="subtitle">Visual reference for system structure, data relationships, and runtime flows.</p>
+
+
+<!-- ═══════════════════════════════════════════════
+     ARCHITECTURE
+═══════════════════════════════════════════════ -->
+
+<div class="section" id="stack">
+<h2>Tech Stack</h2>
+<div class="stack-grid">
+  <div class="stack-card">
+    <div class="layer">Framework</div>
+    <div class="tech">Next.js 15</div>
+    <div class="detail">App Router · TypeScript strict · src/ layout · Turbopack in dev</div>
+  </div>
+  <div class="stack-card">
+    <div class="layer">Database + Auth</div>
+    <div class="tech">Supabase</div>
+    <div class="detail">Postgres · PKCE Auth · RLS on every table · No ORM</div>
+  </div>
+  <div class="stack-card">
+    <div class="layer">Styling</div>
+    <div class="tech">CSS Custom Props</div>
+    <div class="detail"><code>--app-*</code> chrome tokens · <code>--sp-*</code> space tokens · Tailwind for layout only</div>
+  </div>
+  <div class="stack-card">
+    <div class="layer">AI</div>
+    <div class="tech">Claude Haiku 4.5</div>
+    <div class="detail">Theme generation · Journaling prompts · Moderation pre-screen via Anthropic SDK</div>
+  </div>
+  <div class="stack-card">
+    <div class="layer">Billing</div>
+    <div class="tech">Stripe</div>
+    <div class="detail">Checkout sessions · Webhooks · All balance changes via <code>deduct_credits</code> / <code>grant_credits</code> RPCs</div>
+  </div>
+  <div class="stack-card">
+    <div class="layer">Email</div>
+    <div class="tech">Resend</div>
+    <div class="detail">Transactional email · Digest notifications · Config in <code>platform_settings</code></div>
+  </div>
+  <div class="stack-card">
+    <div class="layer">Icons</div>
+    <div class="tech">lucide-react</div>
+    <div class="detail">1.5px stroke · Only lucide — no other icon libraries</div>
+  </div>
+  <div class="stack-card">
+    <div class="layer">Validation</div>
+    <div class="tech">Zod</div>
+    <div class="detail">API route inputs · AI output schemas · Server action payloads</div>
+  </div>
+</div>
+</div><!-- /stack -->
+
+
+<div class="section" id="route-groups">
+<h2>Route Groups</h2>
+<div class="route-tree">
+<div><span class="tree-root">src/app/</span></div>
+<div>├── <span class="tree-group">(marketing)</span>  <span class="tree-note">— AppNav (unauthenticated), no auth guard</span></div>
+<div>│   ├── <span class="tree-route">page.tsx</span>              <span class="tree-label">→ /</span>             <span class="tree-server">server</span>   Landing, static</div>
+<div>│   └── <span class="tree-route">gallery/page.tsx</span>      <span class="tree-label">→ /gallery</span>       <span class="tree-client">client</span>   Tag filter, mock data</div>
+<div>│</div>
+<div>├── <span class="tree-group">(auth)</span>       <span class="tree-note">— bare layout, redirects to /spaces if already authed</span></div>
+<div>│   ├── <span class="tree-route">login/page.tsx</span>        <span class="tree-label">→ /login</span>         <span class="tree-client">client</span></div>
+<div>│   └── <span class="tree-route">signup/page.tsx</span>       <span class="tree-label">→ /signup</span>        <span class="tree-client">client</span></div>
+<div>│</div>
+<div>├── <span class="tree-group">(app)</span>        <span class="tree-note">— AppNav (authenticated), middleware guards /spaces /onboard /account</span></div>
+<div>│   ├── <span class="tree-route">spaces/page.tsx</span>       <span class="tree-label">→ /spaces</span>        <span class="tree-server">server</span>   User dashboard</div>
+<div>│   ├── <span class="tree-route">spaces/new/page.tsx</span>   <span class="tree-label">→ /spaces/new</span>    <span class="tree-client">client</span>   Credit gate + slug picker (credits hardcoded)</div>
+<div>│   ├── <span class="tree-route">onboard/page.tsx</span>      <span class="tree-label">→ /onboard</span>       <span class="tree-client">client</span>   5-step wizard, SSE generation</div>
+<div>│   └── <span class="tree-route">account/credits/page.tsx</span> <span class="tree-label">→ /account/credits</span> <span class="tree-server">server</span> Credits + ledger (mock data)</div>
+<div>│</div>
+<div>├── <span class="tree-group">(admin)</span>     <span class="tree-note">— AdminNav sidebar, layout re-checks role (not just middleware)</span></div>
+<div>│   ├── <span class="tree-route">admin/page.tsx</span>        <span class="tree-label">→ /admin</span>         <span class="tree-client">client</span>   Stats dashboard (mock data)</div>
+<div>│   ├── <span class="tree-route">admin/templates/</span>      <span class="tree-label">→ /admin/templates</span>  <span class="tree-server">server</span> + <span class="tree-client">client</span>  Spec editor + live preview</div>
+<div>│   └── <span class="tree-route">admin/moderation/</span>     <span class="tree-label">→ /admin/moderation</span> <span class="tree-server">server</span>  Gallery queue</div>
+<div>│</div>
+<div>├── <span class="tree-route">auth/callback/route.ts</span> <span class="tree-label">→ /auth/callback</span>  <span class="tree-server">server</span>   PKCE code exchange</div>
+<div>│</div>
+<div>├── <span class="tree-route">[username]/page.tsx</span>   <span class="tree-label">→ /:username</span>     <span class="tree-server">server</span>   Primary space (is_primary=true)</div>
+<div>└── <span class="tree-route">[username]/[slug]/page.tsx</span> <span class="tree-label">→ /:username/:slug</span> <span class="tree-server">server</span>  Secondary spaces</div>
+<br>
+<div><span class="tree-root">API routes (src/app/api/)</span></div>
+<div>├── <span class="tree-route">generate/route.ts</span>             POST   SSE stream, Claude Haiku, spec + palette generation</div>
+<div>├── <span class="tree-route">admin/templates/route.ts</span>      GET POST PUT DELETE   space_templates CRUD</div>
+<div>├── <span class="tree-route">reactions/route.ts</span>            POST   <span style="color:var(--red)">STUB — returns 501</span></div>
+<div>└── <span class="tree-route">stripe/webhook/route.ts</span>       POST   Signature verified, handlers empty stubs</div>
+</div>
+</div><!-- /route-groups -->
+
+
+<div class="section" id="boundaries">
+<h2>Server / Client Boundaries</h2>
+<div class="boundary-diagram">
+  <div class="sl-col boundary-lane server">
+    <h4>Server Components <span class="lane-badge server">RSC</span></h4>
+    <div class="boundary-item">
+      <div class="bi-dot" style="background:var(--green)"></div>
+      <div><div class="bi-name">[username]/page.tsx</div><div class="bi-desc">Fetches profile, space, template spec, reactions. Renders SpaceView as child.</div></div>
+    </div>
+    <div class="boundary-item">
+      <div class="bi-dot" style="background:var(--green)"></div>
+      <div><div class="bi-name">spaces/page.tsx</div><div class="bi-desc">Fetches user's space list and credit balance.</div></div>
+    </div>
+    <div class="boundary-item">
+      <div class="bi-dot" style="background:var(--green)"></div>
+      <div><div class="bi-name">admin/templates/page.tsx</div><div class="bi-desc">Fetches all templates from DB, passes as props to TemplateEditor.</div></div>
+    </div>
+    <div class="boundary-item">
+      <div class="bi-dot" style="background:var(--green)"></div>
+      <div><div class="bi-name">(admin)/layout.tsx</div><div class="bi-desc">Re-checks profiles.role — does not rely on middleware alone.</div></div>
+    </div>
+    <div class="boundary-item">
+      <div class="bi-dot" style="background:var(--green)"></div>
+      <div><div class="bi-name">Server Actions</div><div class="bi-desc"><code>publishSpace</code>, <code>saveSpaceContent</code>, <code>switchTemplate</code> — always re-verify auth + ownership before writing.</div></div>
+    </div>
+  </div>
+  <div class="sl-col boundary-lane" style="background:var(--surface)">
+    <h4>Client Components <span class="lane-badge client">use client</span></h4>
+    <div class="boundary-item">
+      <div class="bi-dot" style="background:var(--orange)"></div>
+      <div><div class="bi-name">SpaceView</div><div class="bi-desc">Owns edit mode state, modal state, template switching. All hooks before early returns.</div></div>
+    </div>
+    <div class="boundary-item">
+      <div class="bi-dot" style="background:var(--orange)"></div>
+      <div><div class="bi-name">SpecRenderer</div><div class="bi-desc">Resolves spec, applies CSS vars, renders decoration + sections. All contentEditable regions live here.</div></div>
+    </div>
+    <div class="boundary-item">
+      <div class="bi-dot" style="background:var(--orange)"></div>
+      <div><div class="bi-name">onboard/page.tsx</div><div class="bi-desc">Full wizard state machine. SSE reading. AbortController for cleanup.</div></div>
+    </div>
+    <div class="boundary-item">
+      <div class="bi-dot" style="background:var(--orange)"></div>
+      <div><div class="bi-name">TemplateEditor</div><div class="bi-desc">Spec JSON textarea → live SpecRenderer preview. CRUD via fetch to /api/admin/templates.</div></div>
+    </div>
+    <div class="boundary-item">
+      <div class="bi-dot" style="background:var(--orange)"></div>
+      <div><div class="bi-name">Sections &amp; Decorations</div><div class="bi-desc">All section and decoration components are client-side. Animations, contentEditable, and state live here.</div></div>
+    </div>
+  </div>
+</div>
+</div><!-- /boundaries -->
+
+
+<div class="section" id="template-engine">
+<h2>Template Engine</h2>
+<div class="engine-grid">
+
+  <div class="engine-box">
+    <div class="engine-box-head" style="color:var(--accent)">🔧 SpecRenderer core</div>
+    <div class="engine-box-body">
+      <div class="engine-item" style="color:#c4b5fd">SpecRenderer.tsx</div>
+      <div class="engine-item" style="color:var(--muted);font-size:11px;padding-left:20px">resolveSpec(template_id, override)</div>
+      <div class="engine-item" style="color:var(--muted);font-size:11px;padding-left:20px">mergeSpec(base, override)</div>
+      <div class="engine-item" style="color:var(--muted);font-size:11px;padding-left:20px">Apply --sp-* CSS vars</div>
+      <div class="engine-item" style="color:var(--muted);font-size:11px;padding-left:20px">Render header scene</div>
+      <div class="engine-item" style="color:var(--muted);font-size:11px;padding-left:20px">Map sections → SECTIONS[]</div>
+      <div style="height:8px"></div>
+      <div class="engine-item" style="color:#a5d8ff">types.ts</div>
+      <div class="engine-item" style="color:#a5d8ff">cards.ts → cardStyle()</div>
+      <div class="engine-item" style="color:#a5d8ff">typography.ts → titleFontSize()</div>
+      <div class="engine-item" style="color:#a5d8ff">utils.ts → hexA(), isDarkMood()</div>
+      <div class="engine-item" style="color:#a5d8ff">templateCatalog.ts → pickTemplate()</div>
+    </div>
+  </div>
+
+  <div class="engine-box">
+    <div class="engine-box-head" style="color:var(--teal)">🎨 DECORATIONS registry</div>
+    <div class="engine-box-body">
+      <div class="engine-item" style="color:var(--teal)">botanicals</div>
+      <div class="engine-item" style="color:var(--teal)">starfield</div>
+      <div class="engine-item" style="color:var(--teal)">waves</div>
+      <div class="engine-item" style="color:var(--teal)">dunes</div>
+      <div class="engine-item" style="color:var(--teal)">aurora</div>
+      <div class="engine-item" style="color:var(--teal)">geometric</div>
+      <div class="engine-item" style="color:var(--teal)">rain</div>
+      <div class="engine-item" style="color:var(--teal)">clouds</div>
+      <div class="engine-item" style="color:var(--teal)">minimal</div>
+      <div class="engine-item" style="color:var(--muted)">petals <span class="alias">→ botanicals</span></div>
+      <div class="engine-item" style="color:var(--muted)">forest  <span class="alias">→ botanicals</span></div>
+      <div class="engine-item" style="color:var(--muted)">smoke   <span class="alias">→ aurora</span></div>
+    </div>
+  </div>
+
+  <div class="engine-box">
+    <div class="engine-box-head" style="color:var(--orange)">📦 SECTIONS registry</div>
+    <div class="engine-box-body">
+      <div class="engine-item" style="color:var(--orange)">goals</div>
+      <div class="engine-item" style="color:var(--orange)">currently</div>
+      <div class="engine-item" style="color:var(--orange)">focus_hero</div>
+      <div class="engine-item" style="color:var(--orange)">notepad</div>
+      <div class="engine-item" style="color:var(--orange)">kanban</div>
+      <div class="engine-item" style="color:var(--orange)">habit_tracker</div>
+      <div class="engine-item" style="color:var(--orange)">reading_list</div>
+      <div class="engine-item" style="color:var(--orange)">quote</div>
+      <div class="engine-item" style="color:var(--orange)">photo</div>
+      <div class="engine-item" style="color:var(--orange)">streak</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="callout callout-info">
+  <span>⚡</span>
+  <span><strong>Spec resolution order:</strong> if <code>templateSpec</code> is passed from the server (fetched from <code>space_templates</code> DB) it is used directly. Otherwise <code>resolveSpec(template_id, spec_override)</code> looks up <code>BASE_TEMPLATE_SPECS[id]</code> and deep-merges the override. The DB template always wins over the hardcoded fallback.</span>
+</div>
+</div><!-- /template-engine -->
+
+
+<div class="divider"></div>
+
+
+<!-- ═══════════════════════════════════════════════
+     ER DIAGRAM
+═══════════════════════════════════════════════ -->
+<div class="section" id="er-diagram">
+<h2>Database ER Diagram</h2>
+
+<div class="er-wrap">
+<div class="er-container">
+
+<!-- ── SVG relationship lines ── -->
+<svg class="er-svg" viewBox="0 0 1020 790" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#4b5a80"/>
+    </marker>
+    <marker id="arr-opt" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#6272a4" opacity="0.7"/>
+    </marker>
+  </defs>
+
+  <!-- auth.users → profiles (cascade) -->
+  <path d="M 195 300 C 225 300 225 190 260 190"
+    stroke="#4b5a80" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+
+  <!-- auth.users → spaces (cascade) — arc over profiles column -->
+  <path d="M 195 300 C 360 300 360 205 510 205"
+    stroke="#4b5a80" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+
+  <!-- auth.users → login_history (cascade) -->
+  <path d="M 195 300 C 225 300 225 435 260 435"
+    stroke="#4b5a80" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+
+  <!-- auth.users → credit_transactions (cascade) -->
+  <path d="M 195 300 C 225 300 225 615 260 615"
+    stroke="#4b5a80" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+
+  <!-- spaces → reactions (cascade) -->
+  <path d="M 710 100 L 775 100"
+    stroke="#4b5a80" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+
+  <!-- spaces → moderation_items (cascade, 1:1 unique) -->
+  <path d="M 710 200 C 742 200 742 282 775 282"
+    stroke="#4b5a80" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+
+  <!-- spaces → prompt_log (cascade) -->
+  <path d="M 710 300 C 742 300 742 470 775 470"
+    stroke="#4b5a80" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+
+  <!-- spaces → content_reports (set null, dashed) -->
+  <path d="M 710 350 C 742 350 742 650 775 650"
+    stroke="#6272a4" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arr-opt)"/>
+
+  <!-- credit_transactions → spaces (space_id, set null, dashed) -->
+  <path d="M 460 615 C 490 615 490 350 510 350"
+    stroke="#6272a4" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arr-opt)"/>
+
+  <!-- Relationship labels -->
+  <text x="200" y="255" font-size="9" fill="#6272a4" font-family="monospace">user_id</text>
+  <text x="352" y="255" font-size="9" fill="#6272a4" font-family="monospace">user_id</text>
+  <text x="200" y="380" font-size="9" fill="#6272a4" font-family="monospace">user_id</text>
+  <text x="200" y="545" font-size="9" fill="#6272a4" font-family="monospace">user_id</text>
+  <text x="712" y="95"  font-size="9" fill="#6272a4" font-family="monospace">space_id</text>
+  <text x="712" y="195" font-size="9" fill="#6272a4" font-family="monospace">space_id</text>
+  <text x="712" y="420" font-size="9" fill="#6272a4" font-family="monospace">space_id</text>
+  <text x="712" y="560" font-size="9" fill="#6272a4" font-family="monospace" opacity="0.7">space_id?</text>
+  <text x="463" y="500" font-size="9" fill="#6272a4" font-family="monospace" opacity="0.7">space_id?</text>
+</svg>
+
+<!-- ── TABLE: auth.users ── -->
+<div class="er-table" style="left:10px; top:265px; width:185px;">
+  <div class="er-table-head" style="background:rgba(167,139,250,0.15); color:#c4b5fd;">
+    🔐 auth.users
+    <span class="pk" style="background:rgba(167,139,250,0.2);color:#c4b5fd;">Supabase</span>
+  </div>
+  <div class="er-table-body">
+    <div class="er-col pk">id <span class="er-type">uuid PK</span></div>
+    <div class="er-col">email</div>
+    <div class="er-col">raw_user_meta_data <span class="er-type">jsonb</span></div>
+  </div>
+</div>
+
+<!-- ── TABLE: profiles ── -->
+<div class="er-table" style="left:260px; top:40px; width:210px;">
+  <div class="er-table-head" style="background:rgba(96,165,250,0.12); color:var(--blue);">
+    profiles
+    <span class="pk" style="background:rgba(96,165,250,0.15);color:var(--blue);">core</span>
+  </div>
+  <div class="er-table-body">
+    <div class="er-col pk">id <span class="er-type">uuid PK</span></div>
+    <div class="er-col fk">user_id → auth.users</div>
+    <div class="er-col important">username <span class="er-type">unique</span></div>
+    <div class="er-col important">credit_balance <span class="er-type">numeric(6,2)</span></div>
+    <div class="er-col">role <span class="er-type">user|admin</span></div>
+    <div class="er-col">subscription_status</div>
+    <div class="er-col">stripe_customer_id</div>
+    <div class="er-col">stripe_subscription_id</div>
+    <div class="er-col">credits_monthly_cap <span class="er-type">int</span></div>
+    <div class="er-col">credits_expiry_at</div>
+  </div>
+</div>
+
+<!-- ── TABLE: login_history ── -->
+<div class="er-table" style="left:260px; top:390px; width:210px;">
+  <div class="er-table-head" style="background:rgba(96,165,250,0.08); color:#93c5fd;">
+    login_history
+  </div>
+  <div class="er-table-body">
+    <div class="er-col pk">id <span class="er-type">uuid PK</span></div>
+    <div class="er-col fk">user_id → auth.users</div>
+    <div class="er-col">ip_country <span class="er-type">2-letter ISO</span></div>
+    <div class="er-col">created_at</div>
+  </div>
+</div>
+
+<!-- ── TABLE: credit_transactions ── -->
+<div class="er-table" style="left:260px; top:540px; width:210px;">
+  <div class="er-table-head" style="background:rgba(74,222,128,0.1); color:var(--green);">
+    credit_transactions
+  </div>
+  <div class="er-table-body">
+    <div class="er-col pk">id <span class="er-type">uuid PK</span></div>
+    <div class="er-col fk">user_id → auth.users</div>
+    <div class="er-col fk" style="opacity:0.7">space_id → spaces?</div>
+    <div class="er-col important">delta <span class="er-type">numeric(6,2)</span></div>
+    <div class="er-col important">balance_after <span class="er-type">numeric(6,2)</span></div>
+    <div class="er-col">action_type <span class="er-type">enum</span></div>
+    <div class="er-col">stripe_payment_intent_id</div>
+  </div>
+</div>
+
+<!-- ── TABLE: spaces ── -->
+<div class="er-table" style="left:510px; top:40px; width:200px;">
+  <div class="er-table-head" style="background:rgba(251,146,60,0.12); color:var(--orange);">
+    spaces
+    <span class="pk" style="background:rgba(251,146,60,0.18);color:var(--orange);">core</span>
+  </div>
+  <div class="er-table-body">
+    <div class="er-col pk">id <span class="er-type">uuid PK</span></div>
+    <div class="er-col fk">user_id → auth.users</div>
+    <div class="er-col important">slug <span class="er-type">unique/user</span></div>
+    <div class="er-col important">design_tokens <span class="er-type">jsonb</span></div>
+    <div class="er-col">content_json <span class="er-type">jsonb</span></div>
+    <div class="er-col important">is_primary <span class="er-type">bool</span></div>
+    <div class="er-col">visibility <span class="er-type">enum</span></div>
+    <div class="er-col">gallery_status <span class="er-type">enum</span></div>
+    <div class="er-col">gallery_tags <span class="er-type">text[]</span></div>
+    <div class="er-col">reactions_enabled</div>
+  </div>
+</div>
+
+<!-- ── TABLE: space_templates ── -->
+<div class="er-table" style="left:510px; top:430px; width:200px;">
+  <div class="er-table-head" style="background:rgba(167,139,250,0.1); color:#a78bfa;">
+    space_templates
+  </div>
+  <div class="er-table-body">
+    <div class="er-col pk">id <span class="er-type">uuid PK</span></div>
+    <div class="er-col important">slug <span class="er-type">unique</span></div>
+    <div class="er-col important">spec <span class="er-type">jsonb</span></div>
+    <div class="er-col">mood_affinity <span class="er-type">text[]</span></div>
+    <div class="er-col">vibe_keywords <span class="er-type">text[]</span></div>
+    <div class="er-col">is_active / is_featured</div>
+    <div class="er-col fk" style="opacity:0.7">created_by → auth.users?</div>
+  </div>
+</div>
+
+<!-- ── TABLE: reactions ── -->
+<div class="er-table" style="left:775px; top:40px; width:210px;">
+  <div class="er-table-head" style="background:rgba(244,114,182,0.1); color:var(--pink);">
+    reactions
+  </div>
+  <div class="er-table-body">
+    <div class="er-col pk">id <span class="er-type">uuid PK</span></div>
+    <div class="er-col fk">space_id → spaces</div>
+    <div class="er-col important">visitor_ip_hash <span class="er-type">SHA256</span></div>
+    <div class="er-col important">message <span class="er-type">1–140 chars</span></div>
+    <div class="er-col">is_visible <span class="er-type">bool</span></div>
+  </div>
+</div>
+
+<!-- ── TABLE: moderation_items ── -->
+<div class="er-table" style="left:775px; top:215px; width:210px;">
+  <div class="er-table-head" style="background:rgba(244,114,182,0.08); color:#f9a8d4;">
+    moderation_items
+  </div>
+  <div class="er-table-body">
+    <div class="er-col fk important">space_id → spaces <span class="er-type">unique</span></div>
+    <div class="er-col">status <span class="er-type">enum</span></div>
+    <div class="er-col fk" style="opacity:0.7">reviewed_by → auth.users?</div>
+    <div class="er-col">rejection_reason</div>
+  </div>
+</div>
+
+<!-- ── TABLE: prompt_log ── -->
+<div class="er-table" style="left:775px; top:410px; width:210px;">
+  <div class="er-table-head" style="background:rgba(45,212,191,0.08); color:var(--teal);">
+    prompt_log
+  </div>
+  <div class="er-table-body">
+    <div class="er-col pk">id <span class="er-type">uuid PK</span></div>
+    <div class="er-col fk">space_id → spaces</div>
+    <div class="er-col">prompt_text</div>
+    <div class="er-col">accepted <span class="er-type">bool</span></div>
+    <div class="er-col important">credits_charged <span class="er-type">0.25</span></div>
+  </div>
+</div>
+
+<!-- ── TABLE: content_reports ── -->
+<div class="er-table" style="left:775px; top:590px; width:210px;">
+  <div class="er-table-head" style="background:rgba(248,113,113,0.1); color:var(--red);">
+    content_reports
+  </div>
+  <div class="er-table-body">
+    <div class="er-col pk">id <span class="er-type">uuid PK</span></div>
+    <div class="er-col fk" style="opacity:0.7">space_id → spaces?</div>
+    <div class="er-col fk" style="opacity:0.7">reaction_id → reactions?</div>
+    <div class="er-col fk" style="opacity:0.7">reporter_user_id?</div>
+    <div class="er-col">reason / status</div>
+  </div>
+</div>
+
+</div><!-- /er-container -->
+</div><!-- /er-wrap -->
+
+<!-- Standalone tables -->
+<div class="er-standalone">
+  <div class="er-table">
+    <div class="er-table-head" style="background:rgba(96,165,250,0.08);color:#93c5fd;">platform_settings</div>
+    <div class="er-table-body">
+      <div class="er-col pk">id = 1 <span class="er-type">singleton</span></div>
+      <div class="er-col">gallery_enabled</div>
+      <div class="er-col">reactions_enabled</div>
+      <div class="er-col">ai_prompts_enabled</div>
+      <div class="er-col">new_signups_enabled</div>
+      <div class="er-col">maintenance_mode</div>
+    </div>
+  </div>
+  <div class="er-table">
+    <div class="er-table-head" style="background:rgba(96,165,250,0.08);color:#93c5fd;">prompt_templates</div>
+    <div class="er-table-body">
+      <div class="er-col pk">id <span class="er-type">uuid PK</span></div>
+      <div class="er-col important">key <span class="er-type">e.g. theme_gen</span></div>
+      <div class="er-col">version <span class="er-type">int</span></div>
+      <div class="er-col">system_text / user_text</div>
+      <div class="er-col important">is_active <span class="er-type">1 per key</span></div>
+    </div>
+  </div>
+  <div class="er-table">
+    <div class="er-table-head" style="background:rgba(96,165,250,0.08);color:#93c5fd;">username_blocklist</div>
+    <div class="er-table-body">
+      <div class="er-col pk">username <span class="er-type">PK</span></div>
+      <div class="er-col">note</div>
+      <div class="er-col">added_at</div>
+      <div class="er-col" style="color:var(--muted);font-size:10.5px">~24 reserved names pre-seeded</div>
+    </div>
+  </div>
+</div>
+
+<div class="er-legend">
+  <div class="er-legend-item"><div class="legend-line" style="background:#4b5a80"></div> Required FK (cascade delete)</div>
+  <div class="er-legend-item"><div class="legend-line" style="background:#6272a4;background-image:repeating-linear-gradient(90deg,#6272a4 0,#6272a4 5px,transparent 5px,transparent 8px)"></div> Optional FK (set null)</div>
+  <div class="er-legend-item"><span style="color:#fde68a;font-family:monospace;font-size:11px">■</span> Primary key / unique</div>
+  <div class="er-legend-item"><span style="color:#93c5fd;font-family:monospace;font-size:11px">■</span> Foreign key</div>
+  <div class="er-legend-item"><span style="color:#d1fae5;font-family:monospace;font-size:11px">■</span> Business-critical column</div>
+</div>
+</div><!-- /er-diagram -->
+
+
+<div class="divider"></div>
+
+
+<!-- ═══════════════════════════════════════════════
+     DATA FLOWS
+═══════════════════════════════════════════════ -->
+
+<!-- ── Flow 1: Onboarding → Publish ── -->
+<div class="section" id="flow-onboard">
+<h2>Data Flows</h2>
+<h3>1 — Onboarding → Publish</h3>
+<div class="swimlane-wrap">
+<div class="swimlane">
+
+  <!-- Headers -->
+  <div class="sl-col sl-browser">
+    <div class="sl-header">Browser (Client)</div>
+    <div class="sl-body">
+      <div class="sl-step hl-blue">
+        <strong>5-step wizard</strong>
+        <em>name · vibes · goal · mood · templateId + density</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> click "Generate my space"</div>
+      <div class="sl-step hl-blue">
+        <strong>POST /api/generate</strong>
+        <em>Opens SSE stream with AbortController</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> stream reading loop</div>
+      <div class="sl-step">
+        <strong>Stage events arrive</strong>
+        <em>{ stage, progress } — animated checklist</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> stage: 'done'</div>
+      <div class="sl-step hl-blue">
+        <strong>Publish screen</strong>
+        <em>genTokens in state · MiniSpace preview</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> click "It's perfect → Publish"</div>
+      <div class="sl-step hl-blue">
+        <strong>publishSpace() server action</strong>
+        <em>Passes genTokens (includes template_id, spec_override)</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-red">
+        <strong>Redirect to /:username</strong>
+        <em>or insufficient_credits error modal</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-server">
+    <div class="sl-header">Server / API</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>Auth check</strong>
+        <em>supabase.auth.getUser() — 401 if missing</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>Build prompt</strong>
+        <em>User inputs + palette hint + template hint if chosen</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>Stream Claude Haiku 4.5</strong>
+        <em>Emit progress events every ~180 chars</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-orange">
+        <strong>Zod parse → retry once if invalid</strong>
+        <em>toTokens() → template_id + spec_override</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> emit done event</div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>Verify auth + profile</strong>
+        <em>credit_balance ≥ 3 else return error</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>Build design_tokens + content_json</strong>
+        <em>Merge AI tokens with fallback palette</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-orange">
+        <strong>deduct_credits RPC (service role)</strong>
+        <em>Row lock → check → deduct → log tx</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>INSERT spaces</strong>
+        <em>Retry with suffix on slug collision (23505)</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-db">
+    <div class="sl-header">Database</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>deduct_credits()</strong>
+        <em>SELECT profiles FOR UPDATE<br>UPDATE profiles SET credit_balance<br>INSERT credit_transactions</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-pink">
+        <strong>INSERT INTO spaces</strong>
+        <em>design_tokens · content_json · is_primary</em>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div><!-- /flow-onboard -->
+
+
+<!-- ── Flow 2: Space Render Chain ── -->
+<div class="section" id="flow-render">
+<h3>2 — Space Render Chain (/:username)</h3>
+<div class="swimlane-wrap">
+<div class="swimlane">
+
+  <div class="sl-col sl-browser">
+    <div class="sl-header">Browser (Client)</div>
+    <div class="sl-body">
+      <div class="sl-step hl-blue">
+        <strong>GET /:username</strong>
+        <em>Initial HTML request</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-arrow"><span class="arr">↓</span> hydration</div>
+      <div class="sl-step hl-blue">
+        <strong>SpaceView (client)</strong>
+        <em>useState for mode, modals, localContent, activeTemplateSpec</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-blue">
+        <strong>SpecRenderer</strong>
+        <em>resolveSpec → CSS vars → decoration → header → sections</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step">
+        <strong>DECORATIONS[type]</strong>
+        <em>SVG/CSS animated background layer</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step">
+        <strong>SECTIONS[id] × n</strong>
+        <em>Each section: contentEditable regions, onBlur → commit()</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> onBlur fires</div>
+      <div class="sl-step hl-blue">
+        <strong>commit(patch)</strong>
+        <em>onUpdate(patch) [optimistic] + onSave(next)</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-orange">
+        <strong>saveSpaceContent(spaceId, content)</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-server">
+    <div class="sl-header">Server</div>
+    <div class="sl-body">
+      <div class="sl-step hl-green">
+        <strong>[username]/page.tsx</strong>
+        <em>Server component — 4 parallel-ish queries</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>Fetch profile</strong>
+        <em>username → user_id, credit_balance</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>Fetch primary space</strong>
+        <em>is_primary = true — 404 if user has none</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>Fetch template spec</strong>
+        <em>space_templates WHERE slug = template_id AND is_active</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>Fetch reactions</strong>
+        <em>Owner: all. Visitor: is_visible=true only</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> render SpaceView</div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>saveSpaceContent action</strong>
+        <em>Verify auth + ownership → UPDATE spaces</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-db">
+    <div class="sl-header">Database</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT profiles</strong>
+        <em>WHERE username = :username</em>
+      </div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT spaces</strong>
+        <em>WHERE user_id AND is_primary</em>
+      </div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT space_templates</strong>
+        <em>WHERE slug = template_id</em>
+      </div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT reactions</strong>
+        <em>ORDER BY created_at DESC LIMIT 20</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>UPDATE spaces</strong>
+        <em>SET content_json, display_name</em>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div><!-- /flow-render -->
+
+
+<!-- ── Flow 3: Credit Deduction ── -->
+<div class="section" id="flow-credits">
+<h3>3 — Credit Deduction (deduct_credits RPC)</h3>
+<div class="swimlane-wrap">
+<div class="swimlane">
+
+  <div class="sl-col sl-browser">
+    <div class="sl-header">Browser (Client)</div>
+    <div class="sl-body">
+      <div class="sl-step hl-orange">
+        <strong>User triggers credit action</strong>
+        <em>e.g. Publish space (3 cr), Regenerate (2 cr)</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> confirmation modal for ≥1 cr</div>
+      <div class="sl-step hl-blue">
+        <strong>Calls server action</strong>
+        <em>publishSpace() / regenerate action</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>✓ Action proceeds</strong>
+        <em>Space created / theme generated</em>
+      </div>
+      <div style="height:8px"></div>
+      <div class="sl-step hl-red">
+        <strong>✗ insufficient_credits</strong>
+        <em>Error modal — no space created, no credits lost</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-server">
+    <div class="sl-header">Server Action</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>Verify auth</strong>
+        <em>supabase.auth.getUser()</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>createServiceClient()</strong>
+        <em>Elevated privileges — required for RPC</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-orange">
+        <strong>Call deduct_credits RPC</strong>
+        <em>svc.rpc('deduct_credits', { p_user_id, p_delta, p_action })</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>Check result</strong>
+        <em>error?.message includes 'insufficient_credits'?</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-db">
+    <div class="sl-header">Database (RPC)</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT credit_balance FOR UPDATE</strong>
+        <em>Row lock prevents concurrent races</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-pink">
+        <strong>Check balance ≥ delta</strong>
+        <em>RAISE 'insufficient_credits' if not</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-pink">
+        <strong>UPDATE profiles</strong>
+        <em>credit_balance = balance − delta</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-pink">
+        <strong>INSERT credit_transactions</strong>
+        <em>delta = −p_delta, balance_after, action_type</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>RETURN new balance</strong>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div><!-- /flow-credits -->
+
+
+<!-- ── Flow 4: Content Edit → Save ── -->
+<div class="section" id="flow-edit">
+<h3>4 — Content Edit → Autosave</h3>
+<div class="swimlane-wrap">
+<div class="swimlane">
+
+  <div class="sl-col sl-browser">
+    <div class="sl-header">Browser (Client)</div>
+    <div class="sl-body">
+      <div class="sl-step hl-blue">
+        <strong>Owner edits contentEditable</strong>
+        <em>Goal text, notepad, heroTitle, subtitle…</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> onBlur fires</div>
+      <div class="sl-step hl-blue">
+        <strong>Section calls onUpdate(patch)</strong>
+        <em>e.g. onUpdate({ heroTitle: 'new text' })</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> SpecRenderer.commit()</div>
+      <div class="sl-step">
+        <strong>onUpdate(patch)</strong>
+        <em>setLocalContent(prev → merged) — optimistic</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> simultaneously</div>
+      <div class="sl-step hl-orange">
+        <strong>saveSpaceContent(spaceId, fullContent)</strong>
+        <em>Calls server action with full SpaceContent</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-blue">
+        <strong>Template switch (SettingsDrawer)</strong>
+        <em>Owner picks a different world</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-orange">
+        <strong>switchTemplate(spaceId, templateId)</strong>
+        <em>Clears spec_override, sets new template_id</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span> returns templateSpec</div>
+      <div class="sl-step hl-blue">
+        <strong>setActiveTemplateSpec(spec)</strong>
+        <em>SpecRenderer re-renders with new template</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-server">
+    <div class="sl-header">Server Action</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>Verify auth</strong>
+        <em>supabase.auth.getUser()</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>Verify ownership</strong>
+        <em>SELECT user_id FROM spaces WHERE id = spaceId</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>Serialize SpaceContent</strong>
+        <em>camelCase → snake_case (heroTitle→hero_title, readingList→reading_list)</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>UPDATE spaces</strong>
+        <em>SET content_json, display_name</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-green">
+        <strong>Verify auth + ownership</strong>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>UPDATE spaces.design_tokens</strong>
+        <em>Drop spec_override, set template_id</em>
+      </div>
+      <div class="sl-arrow"><span class="arr">↓</span></div>
+      <div class="sl-step hl-green">
+        <strong>SELECT space_templates</strong>
+        <em>Return new spec (or null → fallback)</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="sl-col sl-db">
+    <div class="sl-header">Database</div>
+    <div class="sl-body">
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT spaces</strong>
+        <em>WHERE id = spaceId (ownership check)</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>UPDATE spaces</strong>
+        <em>SET content_json = {...}, display_name = title</em>
+      </div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step empty"></div>
+      <div class="sl-step hl-pink">
+        <strong>UPDATE spaces</strong>
+        <em>SET design_tokens (new template_id, no override)</em>
+      </div>
+      <div class="sl-step hl-pink">
+        <strong>SELECT space_templates</strong>
+        <em>WHERE slug = templateId AND is_active</em>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div><!-- /flow-edit -->
+
+</main>
+</body>
+</html>
