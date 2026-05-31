@@ -19,6 +19,7 @@ import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
 import { TabNav, type TabId } from '@/components/space/TabNav';
 import { JournalTab } from '@/components/space/JournalTab';
 import { CompanionTab } from '@/components/space/CompanionTab';
+import { TimelineView } from '@/components/space/TimelineView';
 
 interface SpaceRow {
   id: string;
@@ -48,11 +49,13 @@ interface Props {
   templateSpec?: TemplateSpec | null;
 }
 
-// Reads ?tab= from URL — must be in a component wrapped by Suspense (Next.js 15 requirement)
-function TabReader({ onTab }: { onTab: (t: TabId) => void }) {
+// Reads ?tab= and ?view= from URL — must be in a component wrapped by Suspense (Next.js 15 requirement)
+function TabReader({ onTab, onView }: { onTab: (t: TabId) => void; onView: (v: string) => void }) {
   const sp = useSearchParams();
-  const tab = (sp.get('tab') ?? 'space') as TabId;
-  useEffect(() => { onTab(tab); }, [tab, onTab]);
+  const tab  = (sp.get('tab')  ?? 'space') as TabId;
+  const view = sp.get('view') ?? '';
+  useEffect(() => { onTab(tab); },  [tab,  onTab]);
+  useEffect(() => { onView(view); }, [view, onView]);
   return null;
 }
 
@@ -128,7 +131,8 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, isLogge
     space ? buildContent(space) : { title: '', goals: [] },
   );
   const [timeState, setTimeState] = useState(computeTimeState);
-  const [activeTab, setActiveTab] = useState<TabId>('space');
+  const [activeTab, setActiveTab]   = useState<TabId>('space');
+  const [activeView, setActiveView] = useState('');
   const [pulseStreak, setPulseStreak] = useState(0);
   const [hasJournal, setHasJournal] = useState(false);
   const [remixing, setRemixing] = useState(false);
@@ -204,9 +208,9 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, isLogge
 
   return (
     <>
-      {/* Read ?tab= from URL; Suspense required in Next.js 15 for useSearchParams() */}
+      {/* Read ?tab= and ?view= from URL; Suspense required in Next.js 15 for useSearchParams() */}
       <Suspense fallback={null}>
-        <TabReader onTab={setActiveTab} />
+        <TabReader onTab={setActiveTab} onView={setActiveView} />
       </Suspense>
 
       {/* owner chrome overlay — works for all templates */}
@@ -262,12 +266,19 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, isLogge
         </>
       )}
 
-      {activeTab === 'journal' && (
+      {activeTab === 'journal' && activeView !== 'timeline' && (
         <JournalTab
           spaceId={space.id}
           username={username}
           palette={{ bg: palette.bg, bg2: palette.bg2, accent: palette.accent, text: palette.text, text2: palette.text2, surface: palette.surface }}
           streak={pulseStreak}
+        />
+      )}
+
+      {activeTab === 'journal' && activeView === 'timeline' && isOwner && (
+        <TimelineView
+          spaceId={space.id}
+          palette={{ bg: palette.bg, bg2: palette.bg2, accent: palette.accent, text: palette.text, text2: palette.text2, surface: palette.surface }}
         />
       )}
 

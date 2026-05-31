@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 interface PulseEntry {
   id: string;
@@ -27,7 +28,7 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
-export function JournalTab({ spaceId, palette: p, streak }: JournalTabProps) {
+export function JournalTab({ spaceId, username, palette: p, streak }: JournalTabProps) {
   const [entries, setEntries] = useState<PulseEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,13 +49,18 @@ export function JournalTab({ spaceId, palette: p, streak }: JournalTabProps) {
 
   return (
     <div style={{ minHeight: '100vh', background: `linear-gradient(170deg, ${p.bg}, ${p.bg2})`, color: p.text, fontFamily: "'Nunito', sans-serif", padding: '80px clamp(20px,5vw,60px) 120px', maxWidth: 680, margin: '0 auto' }}>
-      <div style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 28, fontWeight: 900, marginBottom: 6 }}>Journal</h2>
-        {streak > 0 && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: p.surface, border, fontSize: 14, fontWeight: 700, color: p.text2 }}>
-            🔥 {streak}-day pulse streak
-          </div>
-        )}
+      <div style={{ marginBottom: 32, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 28, fontWeight: 900, marginBottom: 6 }}>Journal</h2>
+          {streak > 0 && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: p.surface, border, fontSize: 14, fontWeight: 700, color: p.text2 }}>
+              🔥 {streak}-day pulse streak
+            </div>
+          )}
+        </div>
+        <Link href={`/${username}?tab=journal&view=timeline`} style={{ fontSize: 13, fontWeight: 700, color: p.accent, textDecoration: 'none', padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${p.accent}44`, background: `${p.accent}12`, marginTop: 4 }}>
+          📸 Evolution →
+        </Link>
       </div>
 
       {loading && (
