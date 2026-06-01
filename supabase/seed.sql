@@ -16,18 +16,6 @@ values
     true
   ),
   (
-    'laki-world',
-    'Laki''s World',
-    'Anime-inspired lavender garden world with denser spacing and stronger card presence',
-    '{"version":1,"layout":{"header_style":"botanical","sections":["goals","currently","focus_hero","notepad","kanban","habit_tracker","reading_list","photo","quote"],"max_width":1100,"density":"rich"},"decoration":{"type":"botanicals","density":"lush","animated":true,"fixed_background":true},"scene":{"image":"/templates/laki-world-anime.jpg","position":"right","overlay":"light"},"cards":{"style":"glass","radius":20,"shadow":"medium"},"typography":{"title_scale":"xl","weight":800,"header_uppercase":false}}'::jsonb,
-    'lavender',
-    array['dashboard','botanical','featured'],
-    array['lavender','rose','ocean'],
-    array['playful','creative','focused','dreamy','energetic'],
-    true,
-    true
-  ),
-  (
     'cosmos',
     'Cosmos',
     'Anime-inspired cosmic world with stars, planets, and focused glass cards',

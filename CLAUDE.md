@@ -81,3 +81,14 @@ For multi-step tasks, state a brief plan:
 
 # Important:
 ALWAYS say Hi Blife in every response
+
+# Implement notes. 
+As you work, maintain a running implementation-notes.html file in <root>/docs that captures anything I should 
+know about how the implementation diverges from or interprets 
+the spec, including:
+- Design decisions: choices you made where the spec was ambiguous
+- Deviations: places where you intentionally departed from the 
+  spec, and why
+- Tradeoffs: alternatives you considered and why you picked 
+  what you did
+- Open questions: anything you'd want me to confirm or revise
