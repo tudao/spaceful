@@ -59,7 +59,7 @@ export default function SignupPage() {
 
       <div className="card" style={{ width: '100%', maxWidth: 420, padding: 32 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Create your space</h1>
-        <p style={{ fontSize: 14, color: 'var(--app-text-2)', marginBottom: 28 }}>Start free — 3 credits on us.</p>
+        <p style={{ fontSize: 14, color: 'var(--app-text-2)', marginBottom: 28 }}>Start free — 30 credits on us.</p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
