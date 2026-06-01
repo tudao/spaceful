@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { BookOpen, Check, ChevronLeft, ChevronRight, Image as ImageIcon, PenLine, Quote } from 'lucide-react';
 import type { SectionId, SectionProps } from '../types';
@@ -429,19 +429,35 @@ function PlaceholderSection({ styles }: SectionProps) {
   );
 }
 
-function DailyPulseSection({ content: _content, editing, onUpdate, styles }: SectionProps) {
+function DailyPulseSection({ content: _content, editing: _editing, onUpdate, styles, spaceId, isOwner }: SectionProps) {
   const [morning, setMorning] = useState('');
   const [evening, setEvening] = useState('');
   const h = new Date().getHours();
   const showMorning = h >= 5 && h < 13;
   const showEvening = h >= 13;
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Load today's saved entries on mount
+  useEffect(() => {
+    if (!spaceId || !isOwner) return;
+    fetch(`/api/pulse?space_id=${spaceId}&limit=5`)
+      .then(r => r.json())
+      .then(d => {
+        const todayEntries: { period: string; body: string }[] = (d.entries ?? []).filter((e: { entry_date: string }) => e.entry_date === today);
+        const m = todayEntries.find(e => e.period === 'morning');
+        const ev = todayEntries.find(e => e.period === 'evening');
+        if (m) setMorning(m.body);
+        if (ev) setEvening(ev.body);
+      })
+      .catch(() => {});
+  }, [spaceId, isOwner, today]);
 
   async function save(period: 'morning' | 'evening', body: string) {
-    if (!body.trim()) return;
+    if (!body.trim() || !spaceId) return;
     await fetch('/api/pulse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ period, body: body.trim(), entry_date: new Date().toISOString().slice(0, 10) }),
+      body: JSON.stringify({ space_id: spaceId, period, body: body.trim(), entry_date: today }),
     });
     onUpdate({});
   }

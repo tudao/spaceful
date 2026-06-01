@@ -18,13 +18,14 @@ interface SpecRendererProps {
   onUpdate: (patch: Partial<SpaceContent>) => void;
   onSave: (content: SpaceContent) => Promise<unknown>;
   username?: string;
+  spaceId?: string;
   greeting?: string;
   animSpeed?: number;
   nudgeDay?: 'monday' | 'friday' | 'sunday-evening' | null;
   streak?: number;
 }
 
-export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, onUpdate, onSave, username, greeting, animSpeed = 1, nudgeDay, streak }: SpecRendererProps) {
+export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, onUpdate, onSave, username, spaceId, greeting, animSpeed = 1, nudgeDay, streak }: SpecRendererProps) {
   const spec = useMemo(() => specProp ?? resolveSpec(tokens.template_id, tokens.spec_override), [specProp, tokens.template_id, tokens.spec_override]);
   const p = tokens.palette;
   const editing = isOwner && mode === 'editing';
@@ -86,6 +87,7 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
     isOwner,
     mode,
     editing,
+    spaceId,
     nudgeDay,
     onUpdate: commit,
     updateGoalText,

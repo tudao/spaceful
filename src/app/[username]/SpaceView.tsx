@@ -233,6 +233,7 @@ export function SpaceView({ username, isPrivate, space, isOwner = false, isLogge
             onUpdate={(patch) => setLocalContent(c => ({ ...c, ...patch }))}
             onSave={handleSave}
             username={username}
+            spaceId={space.id}
             greeting={timeState.greeting}
             animSpeed={timeState.animSpeed}
             nudgeDay={isOwner ? timeState.nudgeDay : null}

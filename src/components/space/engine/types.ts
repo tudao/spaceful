@@ -93,6 +93,7 @@ export interface SectionProps {
   isOwner: boolean;
   mode: 'editing' | 'preview';
   editing: boolean;
+  spaceId?: string;
   nudgeDay?: 'monday' | 'friday' | 'sunday-evening' | null;
   onUpdate: (patch: Partial<SpaceContent>) => void;
   updateGoalText: (id: string, text: string) => void;
