@@ -1,6 +1,7 @@
 'use client';
 
-import { Edit3, Eye, Share2, Settings } from 'lucide-react';
+import Link from 'next/link';
+import { Edit3, Eye, Share2, Settings, LayoutGrid } from 'lucide-react';
 
 interface OwnerChromeProps {
   mode: 'editing' | 'preview';
@@ -69,6 +70,9 @@ export function OwnerChrome({ mode, onModeChange, creditBalance, onOpenShare, on
           </span>
         )}
 
+        <Link href="/spaces" title="My spaces" style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--app-text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none' }}>
+          <LayoutGrid size={19} />
+        </Link>
         <button onClick={onOpenShare} title="Share" style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--app-text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
           <Share2 size={19} />
         </button>
