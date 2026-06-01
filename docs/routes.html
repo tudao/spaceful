@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spaceful — Route Reference</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #0f1117;
+    --bg2:     #161b27;
+    --surface: #1e2535;
+    --border:  #2a3347;
+    --text:    #e2e8f0;
+    --muted:   #7a8499;
+    --accent:  #7c6fe0;
+    --accent2: #4ea8d4;
+    --green:   #4ade80;
+    --orange:  #f59e0b;
+    --red:     #f87171;
+    --pink:    #f472b6;
+    --code-bg: #131825;
+    --nav-w:   260px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  nav {
+    width: var(--nav-w);
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    padding: 24px 0 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  nav .logo {
+    padding: 0 20px 20px;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  nav .logo span {
+    display: inline-block;
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #9d7de8, #7c5cdb);
+  }
+
+  nav .section-label {
+    padding: 12px 20px 4px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 20px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    border-left: 2px solid transparent;
+    transition: all 0.12s;
+  }
+
+  nav a:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  nav a.active { color: var(--text); border-left-color: var(--accent); background: rgba(124,111,224,0.08); }
+
+  nav a .badge {
+    margin-left: auto;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 5px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  nav a .badge-page   { background: rgba(78,168,212,0.18); color: var(--accent2); }
+  nav a .badge-api    { background: rgba(74,222,128,0.15); color: var(--green); }
+  nav a .badge-action { background: rgba(245,158,11,0.18); color: var(--orange); }
+  nav a .badge-stub   { background: rgba(248,113,113,0.18); color: var(--red); }
+
+  /* ── Main content ── */
+  main {
+    margin-left: var(--nav-w);
+    flex: 1;
+    max-width: 900px;
+    padding: 48px 52px 100px;
+  }
+
+  /* ── Section ── */
+  .route-section {
+    margin-bottom: 72px;
+    scroll-margin-top: 24px;
+  }
+
+  .route-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .route-path {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tag-page      { background: rgba(78,168,212,0.15); color: var(--accent2); border: 1px solid rgba(78,168,212,0.3); }
+  .tag-server    { background: rgba(124,111,224,0.15); color: #a78bfa; border: 1px solid rgba(124,111,224,0.3); }
+  .tag-client    { background: rgba(245,158,11,0.15); color: var(--orange); border: 1px solid rgba(245,158,11,0.3); }
+  .tag-api       { background: rgba(74,222,128,0.13); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+  .tag-action    { background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.3); }
+  .tag-auth      { background: rgba(248,113,113,0.13); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .tag-admin     { background: rgba(244,114,182,0.13); color: var(--pink); border: 1px solid rgba(244,114,182,0.3); }
+  .tag-stub      { background: rgba(248,113,113,0.1); color: #fca5a5; border: 1px solid rgba(248,113,113,0.25); }
+  .tag-middleware { background: rgba(167,139,250,0.13); color: #c4b5fd; border: 1px solid rgba(167,139,250,0.3); }
+  .tag-mixed     { background: rgba(124,111,224,0.1); color: #818cf8; border: 1px solid rgba(124,111,224,0.25); }
+
+  .route-desc {
+    font-size: 15px;
+    color: #b0bbd1;
+    margin-bottom: 22px;
+    line-height: 1.65;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+
+  .card-head {
+    padding: 12px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-head .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .card-body { padding: 16px; }
+
+  /* ── Data flow ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 14px 16px;
+  }
+
+  .flow-step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    position: relative;
+    padding-bottom: 14px;
+  }
+
+  .flow-step:last-child { padding-bottom: 0; }
+
+  .flow-step::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 22px;
+    bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .flow-step:last-child::before { display: none; }
+
+  .flow-dot {
+    width: 23px;
+    height: 23px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .flow-dot.ok    { border-color: var(--green);   color: var(--green);   background: rgba(74,222,128,0.08); }
+  .flow-dot.warn  { border-color: var(--orange);  color: var(--orange);  background: rgba(245,158,11,0.08); }
+  .flow-dot.err   { border-color: var(--red);     color: var(--red);     background: rgba(248,113,113,0.08); }
+  .flow-dot.info  { border-color: var(--accent);  color: var(--accent);  background: rgba(124,111,224,0.1); }
+
+  .flow-text { font-size: 13.5px; line-height: 1.55; padding-top: 2px; }
+  .flow-text strong { color: var(--text); font-weight: 700; }
+  .flow-text em { color: var(--muted); font-style: normal; font-size: 12.5px; }
+
+  /* ── Code ── */
+  code {
+    font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 12.5px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 5px;
+    color: #a5d8ff;
+  }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #cdd9e5;
+    margin: 0;
+  }
+
+  pre .c  { color: #6272a4; }  /* comment */
+  pre .k  { color: #bd93f9; }  /* keyword */
+  pre .s  { color: #f1fa8c; }  /* string */
+  pre .n  { color: #8be9fd; }  /* name/type */
+  pre .v  { color: #ffb86c; }  /* value */
+
+  /* ── Pills / lists ── */
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 14px 16px;
+  }
+
+  .pill {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--muted);
+    font-family: 'SF Mono', ui-monospace, monospace;
+  }
+
+  .pill.method-get    { color: var(--green);   border-color: rgba(74,222,128,0.3);  background: rgba(74,222,128,0.06); }
+  .pill.method-post   { color: var(--orange);  border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.06); }
+  .pill.method-put    { color: var(--accent2); border-color: rgba(78,168,212,0.3);  background: rgba(78,168,212,0.06); }
+  .pill.method-delete { color: var(--red);     border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.06); }
+
+  ul.notes {
+    list-style: none;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  ul.notes li {
+    display: flex;
+    gap: 9px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #b0bbd1;
+  }
+
+  ul.notes li::before {
+    content: '→';
+    color: var(--accent);
+    flex-shrink: 0;
+    font-weight: 700;
+    margin-top: 1px;
+  }
+
+  /* ── Warning / info callouts ── */
+  .callout {
+    display: flex;
+    gap: 12px;
+    padding: 13px 16px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+
+  .callout-warn  { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); color: #fde68a; }
+  .callout-info  { background: rgba(124,111,224,0.08); border: 1px solid rgba(124,111,224,0.25); color: #c4b5fd; }
+  .callout-red   { background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.25); color: #fca5a5; }
+  .callout-green { background: rgba(74,222,128,0.07);  border: 1px solid rgba(74,222,128,0.25);  color: #86efac; }
+
+  .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 60px 0;
+  }
+
+  /* ── H2 / H3 ── */
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 48px;
+  }
+
+  h2.group-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 28px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── KV table ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(42,51,71,0.5);
+    vertical-align: top;
+    color: #b0bbd1;
+    line-height: 1.5;
+  }
+
+  table td:first-child {
+    font-family: 'SF Mono', ui-monospace, monospace;
+    color: #a5d8ff;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  table tr:last-child td { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<nav>
+  <div class="logo"><span></span> Spaceful Routes</div>
+
+  <div class="section-label">Middleware</div>
+  <a href="#middleware">src/middleware.ts <span class="badge badge-page" style="background:rgba(167,139,250,0.18);color:#c4b5fd;">Edge</span></a>
+
+  <div class="section-label">Marketing</div>
+  <a href="#landing">/  <span class="badge badge-page">Page</span></a>
+  <a href="#gallery">/gallery  <span class="badge badge-page">Page</span></a>
+
+  <div class="section-label">Auth</div>
+  <a href="#login">/login &amp; /signup  <span class="badge badge-page">Page</span></a>
+  <a href="#callback">/auth/callback  <span class="badge badge-api">Route</span></a>
+
+  <div class="section-label">App</div>
+  <a href="#spaces">/spaces  <span class="badge badge-page">Page</span></a>
+  <a href="#spaces-new">/spaces/new  <span class="badge badge-page">Page</span></a>
+  <a href="#onboard">/onboard  <span class="badge badge-page">Page</span></a>
+  <a href="#credits">/account/credits  <span class="badge badge-page">Page</span></a>
+
+  <div class="section-label">Space view</div>
+  <a href="#username">/:username  <span class="badge badge-page">Page</span></a>
+  <a href="#username-tabs">/:username?tab=  <span class="badge badge-page">Tabs</span></a>
+  <a href="#username-slug">/:username/:slug  <span class="badge badge-page">Page</span></a>
+
+  <div class="section-label">Admin</div>
+  <a href="#admin">/admin  <span class="badge badge-page">Page</span></a>
+  <a href="#admin-templates">/admin/templates  <span class="badge badge-page">Page</span></a>
+  <a href="#admin-moderation">/admin/moderation  <span class="badge badge-page">Page</span></a>
+
+  <div class="section-label">API Routes</div>
+  <a href="#api-generate">/api/generate  <span class="badge badge-api">SSE</span></a>
+  <a href="#api-admin-templates">/api/admin/templates  <span class="badge badge-api">REST</span></a>
+  <a href="#api-reactions">/api/reactions  <span class="badge badge-api">REST</span></a>
+  <a href="#api-pulse">/api/pulse  <span class="badge badge-api">REST</span></a>
+  <a href="#api-companion">/api/companion/*  <span class="badge badge-api">SSE+REST</span></a>
+  <a href="#api-unsubscribe">/api/unsubscribe  <span class="badge badge-api">REST</span></a>
+  <a href="#api-cron">/api/cron/*  <span class="badge badge-api">Cron</span></a>
+  <a href="#api-stripe">/api/stripe/webhook  <span class="badge badge-stub">Stub</span></a>
+
+  <div class="section-label">Server Actions</div>
+  <a href="#action-publish">publishSpace</a>
+  <a href="#action-save">saveSpaceContent</a>
+  <a href="#action-switch">switchTemplate</a>
+  <a href="#action-pulse">savePulseEntry</a>
+  <a href="#action-remix">remixSpace</a>
+</nav>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main>
+  <h1>Route Reference</h1>
+  <p class="subtitle">Logic, data flow, auth requirements, and gotchas for every route in Spaceful.</p>
+
+
+  <!-- ══ MIDDLEWARE ══ -->
+  <h2 class="group-label">Middleware</h2>
+
+  <div class="route-section" id="middleware">
+    <div class="route-header">
+      <span class="route-path">src/middleware.ts</span>
+      <span class="tag tag-middleware">Edge · Runs on every request</span>
+    </div>
+    <p class="route-desc">
+      Runs before every page and API route (except static assets and <code>/api/stripe/webhook</code>).
+      Handles session refresh, route protection, admin role enforcement, and auth-page redirect for logged-in users.
+    </p>
+
+    <div class="card">
+      <div class="card-head"><span class="dot" style="color:var(--accent)"></span>Protected path groups</div>
+      <div class="pill-row">
+        <span class="pill">/spaces*</span>
+        <span class="pill">/onboard*</span>
+        <span class="pill">/account*</span>
+        <span class="pill">/admin*</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="dot" style="color:var(--green)"></span>Decision tree</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot info">1</div>
+          <div class="flow-text">
+            <strong>Refresh session</strong> — Supabase SSR client reads cookies, refreshes token if needed, writes updated cookies back to response. This must happen on every request or the session will expire silently.
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot warn">2</div>
+          <div class="flow-text">
+            <strong>Protected + not logged in</strong> → redirect to <code>/login?next=&lt;pathname&gt;</code>. The <code>next</code> param is used by the login page to redirect back after auth.
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot warn">3</div>
+          <div class="flow-text">
+            <strong>Admin path + logged in</strong> → fetch <code>profiles.role</code> (single indexed lookup). If not <code>'admin'</code> → redirect to <code>/spaces</code>. This is the only middleware DB call.
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot warn">4</div>
+          <div class="flow-text">
+            <strong>Auth page (<code>/login</code>, <code>/signup</code>) + already logged in</strong> → redirect to <code>/spaces</code>. Prevents re-login.
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot ok">5</div>
+          <div class="flow-text"><strong>All other requests</strong> → pass through with updated cookie response.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <span><strong>Stripe webhook is excluded from middleware</strong> via the <code>matcher</code> config. This is intentional — Stripe sends raw POST bodies that must not be interrupted by cookie/session logic. Always keep <code>api/stripe/webhook</code> in the exclusion list.</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+
+  <!-- ══ MARKETING ══ -->
+  <h2 class="group-label">Marketing</h2>
+
+  <div class="route-section" id="landing">
+    <div class="route-header">
+      <span class="route-path">/</span>
+      <span class="tag tag-server">Server Component</span>
+      <span class="tag tag-page">Public</span>
+    </div>
+    <p class="route-desc">Landing page. Static — no DB queries. Hero shows a 3-card perspective mockup using <code>MiniSpace</code> and hardcoded data, followed by feature steps and a gallery teaser grid. Primary CTAs are <code>/signup</code> and <code>/gallery</code>.</p>
+    <div class="callout callout-info">
+      <span class="callout-icon">ℹ</span>
+      <span>The gallery teaser on the landing page uses hardcoded data (not the DB). When the gallery has real content, replace <code>GALLERY_TEASER</code> with a server-side query for top 6 approved spaces.</span>
+    </div>
+  </div>
+
+  <div class="route-section" id="gallery">
+    <div class="route-header">
+      <span class="route-path">/gallery</span>
+      <span class="tag tag-client">Client Component</span>
+      <span class="tag tag-page">Public</span>
+    </div>
+    <p class="route-desc">Public gallery with tag filtering. Currently renders <strong>hardcoded mock data</strong>. Tag filter updates the URL query param via <code>useRouter</code>/<code>useSearchParams</code>. Cards link to <code>/:username</code>.</p>
+    <div class="callout callout-red">
+      <span class="callout-icon">✗</span>
+      <span><strong>Not wired to the DB yet.</strong> When implementing: fetch <code>spaces WHERE gallery_status = 'approved' AND visibility = 'public'</code> server-side, join to <code>profiles</code> for username, and pass as props. Tag filter should use GIN index on <code>gallery_tags</code> column.</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+
+  <!-- ══ AUTH ══ -->
+  <h2 class="group-label">Auth</h2>
+
+  <div class="route-section" id="login">
+    <div class="route-header">
+      <span class="route-path">/login &amp; /signup</span>
+      <span class="tag tag-client">Client Component</span>
+      <span class="tag tag-page">Redirect if authed</span>
+    </div>
+    <p class="route-desc">
+      PKCE-based auth via Supabase. Signup creates the user in <code>auth.users</code>, which triggers <code>handle_new_user()</code> to insert a <code>profiles</code> row and grant 3 signup credits. Both pages redirect to <code>/spaces</code> (or the <code>?next=</code> param) on success.
+    </p>
+    <div class="card">
+      <div class="card-head">Signup side-effects (DB trigger)</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot info">1</div>
+          <div class="flow-text"><strong>INSERT into auth.users</strong> (Supabase managed)</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">2</div>
+          <div class="flow-text"><code>on_auth_user_created</code> trigger fires <code>handle_new_user()</code></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">3</div>
+          <div class="flow-text"><strong>INSERT into profiles</strong> with <code>credit_balance = 3</code>. Username defaults to the email prefix if not provided in <code>raw_user_meta_data</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot ok">4</div>
+          <div class="flow-text"><strong>INSERT into credit_transactions</strong> — <code>signup_gift</code> ledger entry, <code>delta = +3</code>.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="route-section" id="callback">
+    <div class="route-header">
+      <span class="route-path">GET /auth/callback</span>
+      <span class="tag tag-api">Route Handler</span>
+      <span class="tag tag-page">Public</span>
+    </div>
+    <p class="route-desc">PKCE code exchange. Supabase redirects here after OAuth or magic-link flows with a <code>?code=</code> param. Calls <code>supabase.auth.exchangeCodeForSession(code)</code>, then redirects to <code>?next=</code> (default <code>/spaces</code>). On failure → <code>/login?error=auth_callback_failed</code>.</p>
+  </div>
+
+  <div class="divider"></div>
+
+
+  <!-- ══ APP ══ -->
+  <h2 class="group-label">App (auth required)</h2>
+
+  <div class="route-section" id="spaces">
+    <div class="route-header">
+      <span class="route-path">/spaces</span>
+      <span class="tag tag-server">Server Component</span>
+      <span class="tag tag-auth">Auth required</span>
+    </div>
+    <p class="route-desc">Dashboard listing all the user's spaces. Redirects to <code>/login</code> if unauthenticated (middleware also handles this). Primary space is pinned first (sorted by <code>is_primary DESC, updated_at DESC</code>).</p>
+    <div class="card">
+      <div class="card-head">DB queries</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot info">1</div>
+          <div class="flow-text">Fetch <code>profiles</code> — <code>username</code>, <code>credit_balance</code>, <code>subscription_status</code></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">2</div>
+          <div class="flow-text">Fetch all <code>spaces</code> for this user — <code>id, slug, display_name, design_tokens, content_json, visibility, is_primary, updated_at</code></div>
+        </div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>Space URL is <code>/:username</code> for the primary, <code>/:username/:slug</code> for secondaries.</li>
+      <li>Each card renders a <code>MiniSpace</code> thumbnail driven by the space's <code>mood</code> from <code>design_tokens</code>.</li>
+      <li>A "New space" dashed card always renders last, linking to <code>/spaces/new</code>.</li>
+    </ul>
+  </div>
+
+  <div class="route-section" id="spaces-new">
+    <div class="route-header">
+      <span class="route-path">/spaces/new</span>
+      <span class="tag tag-client">Client Component</span>
+      <span class="tag tag-auth">Auth required</span>
+    </div>
+    <p class="route-desc">
+      Credit-gated entry point for creating a new space. Shows a credit cost warning and a slug picker if the user has credits; shows a buy-credits CTA if they don't. Clicking "Continue" navigates to <code>/onboard</code>. Also shows 3 free template cards as an alternative path.
+    </p>
+    <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <span><strong>Credit balance is hardcoded</strong> (<code>const CREDITS = 14</code>). Needs wiring to a real session/server value. Same for <code>username</code>. The slug picked on this page is also not yet passed through to onboarding.</span>
+    </div>
+  </div>
+
+  <div class="route-section" id="onboard">
+    <div class="route-header">
+      <span class="route-path">/onboard</span>
+      <span class="tag tag-client">Client Component</span>
+      <span class="tag tag-auth">Auth required</span>
+    </div>
+    <p class="route-desc">
+      Immersive 5-step wizard. No app nav. Background gradient shifts live with the chosen mood. On completion, calls the <code>publishSpace</code> server action which deducts 3 credits and creates the space row.
+    </p>
+    <div class="card">
+      <div class="card-head">Steps</div>
+      <div style="padding:14px 16px;">
+        <table>
+          <thead><tr><th>Step</th><th>State field</th><th>Input</th></tr></thead>
+          <tbody>
+            <tr><td>0 — Name</td><td><code>name</code></td><td>Text input, max 40 chars</td></tr>
+            <tr><td>1 — Vibes</td><td><code>vibes[]</code></td><td>Up to 3 chips from a 10-word list</td></tr>
+            <tr><td>2 — Goal</td><td><code>goal</code></td><td>Text input, optional, max 80 chars</td></tr>
+            <tr><td>3 — Colour mood</td><td><code>mood</code></td><td>6 palette circles with live MiniSpace preview</td></tr>
+            <tr><td>4 — Template</td><td><code>templateId</code>, <code>layout</code></td><td>6 thumbnail cards + "Let AI surprise me" + density toggle</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">Generation flow (Step 4 → generate button)</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot info">1</div>
+          <div class="flow-text"><strong>POST /api/generate</strong> with <code>{ name, vibes, goal, mood, layout, template_id? }</code>. SSE stream opens.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">2</div>
+          <div class="flow-text">Stage events arrive (<code>{ stage, progress }</code>). UI shows animated checklist of completed stages + in-progress bar.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot ok">3</div>
+          <div class="flow-text"><code>{ stage: 'done', tokens }</code> arrives. Transition to publish screen. <code>genTokens</code> state holds the full token payload including <code>template_id</code>, <code>spec_override</code>, <code>palette</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">4</div>
+          <div class="flow-text">Publish screen shows a MiniSpace preview and "It's perfect → Publish" button.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot ok">5</div>
+          <div class="flow-text"><strong>publishSpace server action</strong> called. Deducts 3 credits via RPC, inserts space row. Redirects to <code>/:username</code> (primary) or <code>/:username/:slug</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot warn">6</div>
+          <div class="flow-text">If "Regenerate" is clicked → re-runs the full SSE flow. Costs 2 credits (shown in button label).</div>
+        </div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>If the SSE stream fails or returns invalid JSON after two retries, a fallback token set is emitted (mood-based defaults, no AI palette).</li>
+      <li>The <code>AbortController</code> ref cancels in-flight requests on unmount and on regenerate.</li>
+      <li>If publish fails with <code>insufficient_credits</code>, a modal appears and no space is created — the credit deduction is atomic in the RPC.</li>
+    </ul>
+  </div>
+
+  <div class="route-section" id="credits">
+    <div class="route-header">
+      <span class="route-path">/account/credits</span>
+      <span class="tag tag-server">Server Component</span>
+      <span class="tag tag-auth">Auth required</span>
+    </div>
+    <p class="route-desc">Shows current credit balance, subscription refresh date, purchase packages, a ledger of recent transactions, and a cost reference table. Stripe buy buttons are not yet wired — they render statically.</p>
+    <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <span>Balance, ledger, and refresh date are <strong>hardcoded mock values</strong>. Needs wiring to real <code>credit_transactions</code> and <code>profiles</code> data. Stripe checkout session creation also needs implementing.</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+
+  <!-- ══ SPACE VIEW ══ -->
+  <h2 class="group-label">Space View</h2>
+
+  <div class="route-section" id="username">
+    <div class="route-header">
+      <span class="route-path">/:username</span>
+      <span class="tag tag-server">Server Component</span>
+      <span class="tag tag-page">Public (if not private)</span>
+    </div>
+    <p class="route-desc">Resolves and renders the user's primary space (<code>is_primary = true</code>). Owner sees edit controls; visitors see read-only + reactions.</p>
+    <div class="card">
+      <div class="card-head">DB queries (in order)</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot info">1</div>
+          <div class="flow-text">Fetch <code>profiles</code> WHERE <code>username = :username</code> — gets <code>user_id</code>, <code>display_name</code>, <code>credit_balance</code>. <strong>404 if not found.</strong></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">2</div>
+          <div class="flow-text">Fetch <code>spaces</code> WHERE <code>user_id = profile.user_id AND is_primary = true</code>. Includes <code>design_tokens</code>, <code>content_json</code>, <code>visibility</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot warn">3</div>
+          <div class="flow-text">If visitor + space is <code>private</code> → render <code>&lt;SpaceView isPrivate /&gt;</code> (lock screen). No template/reaction queries needed.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">4</div>
+          <div class="flow-text">Fetch <code>space_templates</code> WHERE <code>slug = design_tokens.template_id AND is_active = true</code>. Returns the full <code>TemplateSpec</code> JSON. Null if template not found (falls back to <code>BASE_TEMPLATE_SPECS</code>).</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">5</div>
+          <div class="flow-text">Fetch <code>reactions</code> for this space. Owner: all reactions. Visitor: only <code>is_visible = true</code>. Ordered by <code>created_at DESC</code>, limit 20.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot ok">6</div>
+          <div class="flow-text">Render <code>&lt;SpaceView&gt;</code> with space, reactions, templateSpec, isOwner, creditBalance.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">SpaceView client component</div>
+      <ul class="notes">
+        <li><strong>All hooks must be called before the early returns</strong> (<code>isPrivate</code>, <code>!space</code>). <code>dtRaw</code> and the 4 template-related <code>useState</code> calls use <code>space?.design_tokens</code> so they're safe when <code>space</code> is undefined.</li>
+        <li><strong>Edit mode</strong>: toggled via <code>OwnerChrome</code>. All <code>contentEditable</code> regions and goal toggles are only active when <code>editing = isOwner &amp;&amp; mode === 'editing'</code>.</li>
+        <li><strong>Template switching</strong>: calls <code>switchTemplate</code> server action → updates <code>design_tokens.template_id</code>, clears <code>spec_override</code>, returns new spec. Client state updates optimistically.</li>
+        <li><strong>Autosave</strong>: every edit calls <code>commit(patch)</code> → <code>onUpdate(patch)</code> (optimistic UI) + <code>onSave(next)</code> (<code>saveSpaceContent</code> server action). No debounce — save fires on every <code>onBlur</code>.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-head">SpecRenderer render chain</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot info">1</div>
+          <div class="flow-text"><strong>Resolve spec</strong>: <code>specProp ?? resolveSpec(template_id, spec_override)</code>. <code>resolveSpec</code> looks up <code>BASE_TEMPLATE_SPECS[template_id]</code> and deep-merges <code>spec_override</code> over it.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">2</div>
+          <div class="flow-text"><strong>Apply CSS vars</strong>: palette fields set as <code>--sp-*</code> inline variables on the root div. Card helpers (<code>cardStyle</code>) and section styles reference these vars.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">3</div>
+          <div class="flow-text"><strong>Render decoration</strong>: look up <code>DECORATIONS[spec.decoration.type]</code> → render the component behind the content.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">4</div>
+          <div class="flow-text"><strong>Render header</strong>: scene image, botanical/wave/cloud overlays, monogram chip, h1 title, subtitle. All contentEditable when <code>editing</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot ok">5</div>
+          <div class="flow-text"><strong>Render sections</strong>: <code>spec.layout.sections.map(id =&gt; SECTIONS[id])</code>. <code>focus_hero</code> + <code>notepad</code> pair into a 2-column grid when density is not spacious.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="route-section" id="username-slug">
+    <div class="route-header">
+      <span class="route-path">/:username/:slug</span>
+      <span class="tag tag-server">Server Component</span>
+      <span class="tag tag-page">Public (if not private)</span>
+    </div>
+    <p class="route-desc">Same render pipeline as <code>/:username</code> but resolves the space by <code>user_id + slug</code> instead of <code>is_primary</code>. Otherwise identical logic. Secondary spaces are not shown in the spaces dashboard unless navigated directly.</p>
+  </div>
+
+  <div class="divider"></div>
+
+
+  <!-- ══ ADMIN ══ -->
+  <h2 class="group-label">Admin (role: admin)</h2>
+
+  <div class="route-section" id="admin">
+    <div class="route-header">
+      <span class="route-path">/admin</span>
+      <span class="tag tag-client">Client Component</span>
+      <span class="tag tag-admin">Admin only</span>
+    </div>
+    <p class="route-desc">Admin dashboard. Currently renders <strong>hardcoded metric cards and canvas charts</strong>. Role check is enforced in middleware (fetches <code>profiles.role</code>). The page itself does not re-check role — rely on middleware.</p>
+    <div class="callout callout-info">
+      <span class="callout-icon">ℹ</span>
+      <span>When connecting real data: signups from <code>profiles.created_at</code>, MRR from Stripe API or a cached table, AI cost from a <code>prompt_log</code> aggregate.</span>
+    </div>
+  </div>
+
+  <div class="route-section" id="admin-templates">
+    <div class="route-header">
+      <span class="route-path">/admin/templates</span>
+      <span class="tag tag-mixed">Server + Client</span>
+      <span class="tag tag-admin">Admin only</span>
+    </div>
+    <p class="route-desc">
+      Template CRUD with live preview. Server component (<code>page.tsx</code>) fetches all rows from <code>space_templates</code>; if the table is empty it falls back to <code>BASE_TEMPLATE_SPECS</code> so the editor is never blank. Renders <code>&lt;TemplateEditor&gt;</code> (client).
+    </p>
+    <div class="card">
+      <div class="card-head">TemplateEditor behaviour</div>
+      <ul class="notes">
+        <li>Left sidebar: list of templates. Click to select. "New" button initialises a draft from <code>BASE_TEMPLATE_SPECS.garden</code>.</li>
+        <li>Middle: form fields (name, slug, description, preview mood, active/featured checkboxes) + a <code>textarea</code> for raw spec JSON. JSON is validated on each keystroke via <code>JSON.parse</code>. Invalid JSON shows a status message.</li>
+        <li>Right: live <code>SpecRenderer</code> preview, always driven by the current draft spec and preview mood. Updates in real time as JSON is edited.</li>
+        <li>Save: <code>POST</code> (new) or <code>PUT</code> (existing) to <code>/api/admin/templates</code>. Response updates local state; no page reload needed.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="route-section" id="admin-moderation">
+    <div class="route-header">
+      <span class="route-path">/admin/moderation</span>
+      <span class="tag tag-server">Server Component</span>
+      <span class="tag tag-admin">Admin only</span>
+    </div>
+    <p class="route-desc">Gallery moderation queue. Shows spaces in <code>moderation_items WHERE status = 'pending'</code>. Approve → sets <code>spaces.gallery_status = 'approved'</code> and <code>visibility = 'public'</code>. Reject → records a <code>rejection_reason</code>.</p>
+  </div>
+
+  <div class="divider"></div>
+
+
+  <!-- ══ API ROUTES ══ -->
+  <h2 class="group-label">API Routes</h2>
+
+  <div class="route-section" id="api-generate">
+    <div class="route-header">
+      <span class="route-path">POST /api/generate</span>
+      <span class="tag tag-api">SSE Stream</span>
+      <span class="tag tag-auth">Auth required</span>
+    </div>
+    <p class="route-desc">Core AI generation endpoint. Streams SSE events while Claude Haiku generates a personalised <code>TemplateSpec</code> + palette. Includes a retry pass and a fallback so the client always receives a <code>done</code> event.</p>
+
+    <div class="card">
+      <div class="card-head">Request body (validated with Zod)</div>
+      <pre><code>{
+  name:        string,           <span class="c">// 1–60 chars</span>
+  vibes:       string[],         <span class="c">// max 3</span>
+  goal:        string,           <span class="c">// max 120 chars</span>
+  mood:        SpaceMood,        <span class="c">// lavender|sand|forest|ocean|rose|midnight</span>
+  layout:      'spacious'|'rich',
+  template_id: string | undefined <span class="c">// '' or omitted = AI picks via pickTemplate()</span>
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="card-head">SSE event types</div>
+      <div style="padding:14px 16px;">
+        <table>
+          <thead><tr><th>Event shape</th><th>When</th></tr></thead>
+          <tbody>
+            <tr><td><code>{ stage, progress }</code></td><td>During generation. Stage label advances ~every 180 chars of Claude output.</td></tr>
+            <tr><td><code>{ stage: 'done', tokens }</code></td><td>After successful Zod parse or retry. <code>tokens</code> is the full engine token payload.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">Token resolution logic</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot info">1</div>
+          <div class="flow-text">Claude streams a JSON object matching <code>TokenSchema</code> (mood, layout, decoration, cards, typography, palette, copy fields).</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">2</div>
+          <div class="flow-text"><strong>Zod parse</strong>. If valid → <code>toTokens(data)</code>: extracts layout/decoration/cards/typography into <code>spec_override</code>, resolves <code>template_id</code> (user's choice or <code>pickTemplate(mood, vibes)</code>), emits <code>done</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot warn">3</div>
+          <div class="flow-text"><strong>Parse failed</strong> → single retry: sends Claude's bad output + validation errors back as a correction prompt. Non-streaming call (max_tokens 1024). Zod parse again.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot err">4</div>
+          <div class="flow-text"><strong>Retry also failed</strong> → emit <code>fallbackTokens(mood, layout, vibes)</code>. Hardcoded mood-based defaults, no AI palette.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot err">5</div>
+          <div class="flow-text"><strong>Network/SDK error</strong> → caught in <code>finally</code>, always closes stream. Emits fallback if not yet done.</div>
+        </div>
+      </div>
+    </div>
+
+    <ul class="notes">
+      <li><strong>Template hint in prompt</strong>: if <code>template_id</code> is provided, the prompt tells Claude to honour that template's decoration type and header style spirit while personalising colours and sections.</li>
+      <li>Model: <strong>Claude Haiku 4.5</strong> (<code>claude-haiku-4-5-20251001</code>). Fast and cheap for structured JSON generation.</li>
+      <li>All hex colours are validated as <code>#RRGGBB</code>. Glow must be <code>rgba()</code> with alpha 0.20–0.35. Zod catches deviations.</li>
+    </ul>
+  </div>
+
+  <div class="route-section" id="api-admin-templates">
+    <div class="route-header">
+      <span class="route-path">/api/admin/templates</span>
+      <span class="tag tag-api">REST</span>
+      <span class="tag tag-admin">Admin only</span>
+    </div>
+    <p class="route-desc">Full CRUD for the <code>space_templates</code> table. Every method calls <code>requireAdmin()</code> which re-verifies role server-side (not just middleware).</p>
+    <div class="card">
+      <div class="card-head">Methods</div>
+      <div class="pill-row">
+        <span class="pill method-get">GET — list all templates</span>
+        <span class="pill method-post">POST — create (slug, name, spec required)</span>
+        <span class="pill method-put">PUT — update by id</span>
+        <span class="pill method-delete">DELETE ?id= — delete by id</span>
+      </div>
+    </div>
+    <ul class="notes">
+      <li><code>created_by</code> is set to the admin's <code>user.id</code> on POST. Null for system-seeded templates.</li>
+      <li>PUT accepts any subset of columns — no partial-merge logic, Postgres does it. Don't send <code>id</code> in the body for PUT (it's extracted and used as the WHERE clause).</li>
+    </ul>
+  </div>
+
+  <div class="route-section" id="api-reactions">
+    <div class="route-header">
+      <span class="route-path">POST /api/reactions</span>
+      <span class="tag tag-stub">Stub — not implemented</span>
+    </div>
+    <p class="route-desc">Visitor reaction submission. Always returns <code>501</code>. Schema is defined (Zod: <code>space_id</code> uuid, <code>message</code> 1–140 chars). Implementation needs: rate limit check (3/space/IP/hour, app-layer — not RLS), SHA256 hash of <code>IP + space_id</code> for <code>visitor_ip_hash</code>, insert into <code>reactions</code> with <code>is_visible = false</code>.</p>
+  </div>
+
+  <div class="route-section" id="api-stripe">
+    <div class="route-header">
+      <span class="route-path">POST /api/stripe/webhook</span>
+      <span class="tag tag-stub">Stub — handlers empty</span>
+    </div>
+    <p class="route-desc">Stripe webhook receiver. Signature verification is implemented and works. The <code>switch</code> handlers are empty stubs. <strong>Raw body parsing is required</strong> — this is why the route is excluded from middleware (which would mutate the request). Three events need implementing:</p>
+    <div class="card">
+      <div class="card-head">Events to handle</div>
+      <div style="padding:14px 16px;">
+        <table>
+          <thead><tr><th>Event</th><th>Required action</th></tr></thead>
+          <tbody>
+            <tr><td><code>checkout.session.completed</code></td><td>Call <code>grant_credits</code> RPC with purchase delta. Map Stripe customer to <code>profiles.stripe_customer_id</code>.</td></tr>
+            <tr><td><code>invoice.paid</code></td><td>Call <code>grant_credits</code> RPC with <code>p_cap = credits_monthly_cap</code> (subscription rollover ceiling). Update <code>subscription_status = 'active'</code>.</td></tr>
+            <tr><td><code>customer.subscription.deleted</code></td><td>Update <code>subscription_status = 'cancelled'</code>, set <code>credits_expiry_at = now() + 90 days</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <span>Always call <code>grant_credits</code> / <code>deduct_credits</code> via service-role client. Never use the user-context client for credit mutations — it doesn't have permission and would silently fail RLS.</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+
+  <!-- ══ SERVER ACTIONS ══ -->
+  <h2 class="group-label">Server Actions</h2>
+
+  <div class="route-section" id="action-publish">
+    <div class="route-header">
+      <span class="route-path">publishSpace(input)</span>
+      <span class="tag tag-action">Server Action</span>
+      <span class="tag tag-auth">Auth required</span>
+    </div>
+    <p class="route-desc">Called from the onboarding publish screen. Creates the space and deducts 3 credits atomically. On success, redirects directly (no return value needed by the client).</p>
+    <div class="card">
+      <div class="card-head">Flow</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot warn">1</div>
+          <div class="flow-text">Verify auth. If no user → <code>redirect('/login?next=/onboard')</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot warn">2</div>
+          <div class="flow-text">Fetch profile. If <code>credit_balance &lt; 3</code> → return <code>{ error: 'insufficient_credits' }</code> (no redirect — UI shows modal).</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">3</div>
+          <div class="flow-text">Build <code>design_tokens</code> from <code>generatedTokens</code> (AI output) falling back to preset palette. Build <code>content_json</code> with name, subtitle, goal as first goal chip.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">4</div>
+          <div class="flow-text">Derive <code>slug</code> from name (lowercase, hyphens, max 40 chars). Check if this is the user's first space to set <code>is_primary</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">5</div>
+          <div class="flow-text">Call <code>deduct_credits(user_id, 3, 'generation')</code> via <strong>service-role client</strong>. If it raises → return <code>{ error: ... }</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">6</div>
+          <div class="flow-text">INSERT into <code>spaces</code>. If slug collision (code <code>23505</code>) → append a 4-char random suffix and retry once.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot ok">7</div>
+          <div class="flow-text">Redirect to <code>/:username</code> (primary) or <code>/:username/:slug</code>.</div>
+        </div>
+      </div>
+    </div>
+    <div class="callout callout-red">
+      <span class="callout-icon">✗</span>
+      <span><strong>Credit deduction happens before space insert.</strong> If the space insert fails after credits are deducted, the user loses 3 credits with no space created. Add a rollback <code>grant_credits</code> call in the error path to fix this.</span>
+    </div>
+  </div>
+
+  <div class="route-section" id="action-save">
+    <div class="route-header">
+      <span class="route-path">saveSpaceContent(spaceId, content)</span>
+      <span class="tag tag-action">Server Action</span>
+      <span class="tag tag-auth">Auth + ownership required</span>
+    </div>
+    <p class="route-desc">Called on every <code>onBlur</code> event inside <code>SpecRenderer</code>. Verifies ownership before writing. Serialises camelCase <code>SpaceContent</code> back to snake_case DB field names.</p>
+    <div class="card">
+      <div class="card-head">Field name mapping (camelCase → DB)</div>
+      <div style="padding:14px 16px;">
+        <table>
+          <thead><tr><th>SpaceContent field</th><th>content_json key</th></tr></thead>
+          <tbody>
+            <tr><td><code>heroTitle</code></td><td><code>hero_title</code></td></tr>
+            <tr><td><code>heroNotes</code></td><td><code>hero_notes</code></td></tr>
+            <tr><td><code>readingList</code></td><td><code>reading_list</code></td></tr>
+            <tr><td>all others</td><td>same name</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>Ownership check: SELECT <code>user_id</code> from <code>spaces</code>, compare to <code>auth.getUser()</code>. Returns <code>{ error: 'forbidden' }</code> on mismatch — never throws.</li>
+      <li>Also updates <code>display_name</code> when <code>content.title</code> changes.</li>
+      <li>No debounce — fires on every blur. Fine for now; consider debouncing if AI journaling prompts are added (they update content on a timer).</li>
+    </ul>
+  </div>
+
+  <div class="route-section" id="action-switch">
+    <div class="route-header">
+      <span class="route-path">switchTemplate(spaceId, templateId)</span>
+      <span class="tag tag-action">Server Action</span>
+      <span class="tag tag-auth">Auth + ownership required</span>
+    </div>
+    <p class="route-desc">Called from <code>SettingsDrawer</code> when the owner picks a different template. Updates <code>design_tokens.template_id</code>, clears <code>spec_override</code> (so the new template renders cleanly), and returns the new template's spec from the DB.</p>
+    <div class="card">
+      <div class="card-head">Spec override clearing</div>
+      <pre><span class="c">// destructure to drop spec_override, keep everything else</span>
+<span class="k">const</span> { spec_override: _drop, ...restTokens } = space.design_tokens ?? {};
+<span class="k">const</span> updated = { ...restTokens, template_id: templateId };</pre>
+    </div>
+    <ul class="notes">
+      <li>Returns <code>{ ok: true, templateSpec: TemplateSpec | null }</code>. Client updates <code>activeTemplateSpec</code> and <code>activeSpecOverride</code> state immediately.</li>
+      <li>If the new template isn't in <code>space_templates</code> (e.g. it's a base template not yet seeded), <code>templateSpec</code> is null and <code>SpecRenderer</code> falls back to <code>BASE_TEMPLATE_SPECS</code>.</li>
+    </ul>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══ ENGAGEMENT ROUTES ══ -->
+  <h2 class="group-label">Engagement &amp; Retention — Phase 2–6</h2>
+
+  <!-- Tab navigation -->
+  <div class="route-section" id="username-tabs">
+    <div class="route-header">
+      <span class="route-path">/:username?tab=journal|companion</span>
+      <span class="tag tag-mixed">Client Component · URL-driven</span>
+    </div>
+    <p class="route-desc">
+      The <code>/:username</code> page renders three tabs controlled by the <code>?tab=</code> search param. Default is <code>space</code>. Tab state is in the URL so shared links can open a specific tab directly.
+    </p>
+    <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <span><strong>Next.js 15:</strong> <code>useSearchParams()</code> in a Client Component requires a <code>&lt;Suspense&gt;</code> boundary. <code>TabNav</code> is wrapped in <code>&lt;Suspense fallback={&lt;TabNavSkeleton /&gt;}&gt;</code> in SpaceView. Without it, Next.js 15 throws a build error.</span>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="dot" style="color:var(--accent2)"></span>Tab contents</div>
+      <table>
+        <thead><tr><th>Tab</th><th>Visible to</th><th>Content</th></tr></thead>
+        <tbody>
+          <tr><td><code>?tab=space</code> (default)</td><td>All</td><td>SpecRenderer with sections — the existing visual space</td></tr>
+          <tr><td><code>?tab=journal</code></td><td>All (if owner has entries)</td><td>Daily Pulse timeline, AI letters, snapshot timeline</td></tr>
+          <tr><td><code>?tab=companion</code></td><td>Owner only</td><td>Daily message, semantic quote, chat history + input</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="notes">
+      <li>Companion tab is hidden from visitors entirely — the tab button doesn't render and the URL param is ignored.</li>
+      <li>Journal tab only shows if owner has at least one pulse entry or AI letter.</li>
+    </ul>
+  </div>
+
+  <!-- /api/reactions -->
+  <div class="route-section" id="api-reactions">
+    <div class="route-header">
+      <span class="route-path">POST /api/reactions</span>
+      <span class="tag tag-api">API Route</span>
+    </div>
+    <p class="route-desc">Visitor knock submission. Three types: <code>message</code> (text), <code>energy</code> (one-tap, no text), <code>goal_cheer</code> (targets a specific goal). Rate limited to 3/space/IP/hour. IP is never stored — only <code>SHA256(ip + space_id)</code>.</p>
+    <div class="callout callout-info">
+      <span class="callout-icon">ℹ</span>
+      <span><strong>DB-based rate limiting:</strong> <code>SELECT COUNT(*)</code> from <code>reactions</code> WHERE ip_hash + space_id + created_at &gt; 1 hour ago. In-memory maps don't work in Vercel serverless (each instance has empty state). No new table needed.</span>
+    </div>
+    <div class="card">
+      <div class="card-head">Request body</div>
+      <pre>{ space_id: string, type: 'message'|'energy'|'goal_cheer',
+  message?: string,   <span class="c">// required for message/goal_cheer</span>
+  goal_id?: string }  <span class="c">// required for goal_cheer</span></pre>
+    </div>
+    <ul class="notes">
+      <li>Returns 201 on success, 429 on rate limit, 400 on missing required fields.</li>
+      <li>Failure mode: if the rate-limit DB query times out, fail open (allow the knock) — don't reject legitimate visitors for a slow query.</li>
+    </ul>
+  </div>
+
+  <!-- /api/pulse -->
+  <div class="route-section" id="api-pulse">
+    <div class="route-header">
+      <span class="route-path">GET /api/pulse</span>
+      <span class="tag tag-api">API Route</span>
+    </div>
+    <p class="route-desc">Returns daily pulse entries for the Journal tab plus a streak count. Query param: <code>?space_id=xxx&amp;limit=30</code>.</p>
+    <div class="callout callout-info">
+      <span class="callout-icon">ℹ</span>
+      <span><strong>Streak logic:</strong> Scans <code>daily_pulse_entries</code> backwards from <strong>yesterday</strong> (not today), max 365 rows. Today is always "in progress" — the streak never resets before the user has had a chance to log. This is the Duolingo / GitHub / Notion pattern that prevents morning-anxiety (streak showing 0 before logging).</span>
+    </div>
+    <div class="card">
+      <div class="card-head">Response shape</div>
+      <pre>{ entries: DailyPulseEntry[], streak: number, today_logged: boolean }</pre>
+    </div>
+  </div>
+
+  <!-- /api/companion/* -->
+  <div class="route-section" id="api-companion">
+    <div class="route-header">
+      <span class="route-path">/api/companion/daily &amp; /api/companion/chat</span>
+      <span class="tag tag-api">API Routes</span>
+    </div>
+    <p class="route-desc">Two companion endpoints. The daily message is free and cached; the chat costs 0.1 credits per exchange.</p>
+    <div class="card">
+      <div class="card-head"><span class="dot" style="color:var(--green)"></span>GET /api/companion/daily</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot info">1</div>
+          <div class="flow-text"><strong>Check cache</strong> — SELECT from <code>companion_daily</code> WHERE <code>(space_id, today)</code>. Cache hit → return immediately.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">2</div>
+          <div class="flow-text"><strong>Build context</strong> — assemble archetype tone, goals, habits, focus hero, last 7 pulse entries, reading list, mood+vibes (~600 tokens).</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot info">3</div>
+          <div class="flow-text"><strong>Claude Haiku</strong> → 3–5 sentence message + pgvector quote match.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot ok">4</div>
+          <div class="flow-text"><strong>Cache + return</strong> — INSERT into <code>companion_daily</code>, return message + quote.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot err">!</div>
+          <div class="flow-text"><strong>Claude 529 / error</strong> — return a fallback archetype greeting. Never 500 on companion failure.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="dot" style="color:var(--orange)"></span>POST /api/companion/chat</div>
+      <ul class="notes">
+        <li>Auth required. Deducts 0.1 credits via <code>deduct_credits(action='companion_chat')</code> before calling Claude. Returns 402 if insufficient balance — no wasted API tokens.</li>
+        <li>Streams SSE response (same pattern as <code>/api/generate</code>). Appends <code>user</code> + <code>assistant</code> rows to <code>companion_interactions</code>.</li>
+        <li>Context is the same as the daily message assembly. Full space context on every chat turn.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- /api/unsubscribe -->
+  <div class="route-section" id="api-unsubscribe">
+    <div class="route-header">
+      <span class="route-path">GET /api/unsubscribe</span>
+      <span class="tag tag-api">API Route · No auth required</span>
+    </div>
+    <p class="route-desc">One-click email opt-out. Validates a time-limited HMAC-SHA256 token embedded in the weekly digest email. Sets <code>profiles.email_digest_opted_out = true</code>. No login required. Invalid or expired tokens return 400 without opting out.</p>
+    <div class="card">
+      <div class="card-head">Token structure</div>
+      <pre>HMAC-SHA256(user_id + ":" + expiry_unix_ts, RESEND_SIGNING_SECRET)
+<span class="c">// URL: /api/unsubscribe?token=xxx&uid=yyy&exp=zzz</span></pre>
+    </div>
+  </div>
+
+  <!-- /api/cron/* -->
+  <div class="route-section" id="api-cron">
+    <div class="route-header">
+      <span class="route-path">/api/cron/*</span>
+      <span class="tag tag-api">Vercel Cron Routes · Service role key required</span>
+    </div>
+    <p class="route-desc">Three cron routes. All require <code>Authorization: Bearer &lt;CRON_SECRET&gt;</code> header to prevent public triggering.</p>
+    <div class="card">
+      <div class="card-head">Cron schedule</div>
+      <table>
+        <thead><tr><th>Route</th><th>Schedule</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>POST /api/cron/weekly-digest</code></td><td>Sunday 18:00 UTC</td><td>Sends weekly email digest to owners with new knocks or 5+ days inactive. Respects <code>email_digest_opted_out</code>. Logs failed sends for retry next week.</td></tr>
+          <tr><td><code>POST /api/cron/monthly-snapshot</code></td><td>1st of month 00:01 UTC</td><td>Copies <code>content_json</code> to <code>space_snapshots</code>. Batches 100 spaces per iteration using <code>WHERE NOT EXISTS</code> cursor — idempotent, timeout-safe (Vercel 300s limit).</td></tr>
+          <tr><td><code>POST /api/cron/monthly-letter</code></td><td>2nd of month 00:01 UTC</td><td>Diffs current vs previous snapshot, Claude writes a 5-sentence personal letter, stores as <code>daily_pulse_entries</code> row with <code>period='ai_letter'</code>, sends via Resend. Skips if no prior snapshot (user's first month).</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <span><strong>Failure modes:</strong> Resend rate limit mid-batch silently skips remaining emails — log each failure, retry next week. Claude API 529 during letter generation should be caught and retried the following day, not left as a permanent miss.</span>
+    </div>
+  </div>
+
+  <!-- savePulseEntry -->
+  <div class="route-section" id="action-pulse">
+    <div class="route-header">
+      <span class="route-path">savePulseEntry(spaceId, date, period, body)</span>
+      <span class="tag tag-action">Server Action</span>
+      <span class="tag tag-auth">Auth required</span>
+    </div>
+    <p class="route-desc">Upserts a morning or evening pulse entry. Free — no credit cost. Daily ritual must never cost credits.</p>
+    <ul class="notes">
+      <li>Uses <code>INSERT ... ON CONFLICT (space_id, entry_date, period) DO UPDATE SET body = EXCLUDED.body</code> — safe to call multiple times for the same slot.</li>
+      <li>Body max 280 chars enforced by DB check constraint.</li>
+      <li>Clock skew edge case: if user saves at 23:59:59 and hits server at 00:00:01, the date param (sent from client) is used, not server time.</li>
+    </ul>
+  </div>
+
+  <!-- remixSpace -->
+  <div class="route-section" id="action-remix">
+    <div class="route-header">
+      <span class="route-path">remixSpace(sourceSpaceId)</span>
+      <span class="tag tag-action">Server Action</span>
+      <span class="tag tag-auth">Auth required</span>
+    </div>
+    <p class="route-desc">Copies a public space's template configuration (template_id, spec_override) to the logged-in user's primary space. Content is never copied. Free — acquisition mechanic.</p>
+    <ul class="notes">
+      <li>Reads <code>design_tokens.template_id</code> and <code>design_tokens.spec_override</code> from source space. Verifies source is <code>visibility='public'</code> before copying.</li>
+      <li>Increments <code>remix_count</code> on source space. Optionally sets <code>design_tokens.remixed_from_username</code> on target for lineage credit.</li>
+      <li>Does NOT copy palette, mood, or content_json — only the layout/decoration spec.</li>
+    </ul>
+  </div>
+
+</main>
+</body>
+</html>
