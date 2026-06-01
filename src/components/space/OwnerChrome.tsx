@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Edit3, Eye, Share2, Settings, LayoutGrid } from 'lucide-react';
+import { Edit3, Eye, Share2, Settings, ChevronLeft } from 'lucide-react';
 
 interface OwnerChromeProps {
   mode: 'editing' | 'preview';
@@ -17,11 +17,29 @@ export function OwnerChrome({ mode, onModeChange, creditBalance, onOpenShare, on
 
   return (
     <>
+      {/* back to spaces */}
+      <Link
+        href="/spaces"
+        style={{
+          position: 'fixed', top: 18, left: 18, zIndex: 100,
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          height: 40, padding: '0 15px', borderRadius: 999,
+          background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(14px)',
+          border: '1px solid rgba(255,255,255,0.7)',
+          boxShadow: '0 4px 18px rgba(26,16,64,0.14)',
+          fontSize: 13, fontWeight: 700, color: 'var(--app-text-2)',
+          textDecoration: 'none', whiteSpace: 'nowrap', transition: 'var(--t-fast)',
+        }}
+      >
+        <ChevronLeft size={15} strokeWidth={2.5} />
+        My spaces
+      </Link>
+
       {/* credit pill */}
       <a
         href="/account/credits"
         style={{
-          position: 'fixed', top: 18, left: 18, zIndex: 100,
+          position: 'fixed', top: 18, left: 148, zIndex: 100,
           display: 'inline-flex', alignItems: 'center', gap: 7,
           height: 40, padding: '0 15px', borderRadius: 999,
           background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(14px)',
@@ -70,9 +88,6 @@ export function OwnerChrome({ mode, onModeChange, creditBalance, onOpenShare, on
           </span>
         )}
 
-        <Link href="/spaces" title="My spaces" style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--app-text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none' }}>
-          <LayoutGrid size={19} />
-        </Link>
         <button onClick={onOpenShare} title="Share" style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--app-text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
           <Share2 size={19} />
         </button>
