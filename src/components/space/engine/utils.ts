@@ -2,7 +2,7 @@ import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
 import type { SpacePalette } from '../SpacePage';
 import type { TemplateSpec, TemplateSpecOverride } from './types';
 
-const CORE_SECTIONS = ['goals', 'currently', 'focus_hero', 'notepad', 'kanban', 'habit_tracker', 'reading_list', 'photo', 'quote'] as const;
+const CORE_SECTIONS = ['goals', 'currently', 'focus_hero', 'daily_pulse', 'notepad', 'kanban', 'habit_tracker', 'reading_list', 'photo', 'quote'] as const;
 
 export function hexA(hex: string, alpha: number): string {
   if (hex.startsWith('rgba') || hex.startsWith('rgb')) {

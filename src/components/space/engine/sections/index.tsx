@@ -458,7 +458,6 @@ function DailyPulseSection({ content: _content, editing, onUpdate, styles }: Sec
             onBlur={() => save('morning', morning)}
             placeholder="What's your intention for today?"
             maxLength={280}
-            readOnly={!editing}
             style={{ width: '100%', boxSizing: 'border-box', resize: 'none', background: 'var(--sp-chip-bg)', border: `1px solid ${styles.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, lineHeight: 1.65, color: 'var(--sp-text)', outline: 'none', minHeight: 48, fontFamily: "'Nunito',sans-serif" }}
           />
         </div>
@@ -472,7 +471,6 @@ function DailyPulseSection({ content: _content, editing, onUpdate, styles }: Sec
             onBlur={() => save('evening', evening)}
             placeholder="One thing you're proud of today."
             maxLength={280}
-            readOnly={!editing}
             style={{ width: '100%', boxSizing: 'border-box', resize: 'none', background: 'var(--sp-chip-bg)', border: `1px solid ${styles.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, lineHeight: 1.65, color: 'var(--sp-text)', outline: 'none', minHeight: 48, fontFamily: "'Nunito',sans-serif" }}
           />
         </div>
