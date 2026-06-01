@@ -38,7 +38,7 @@ export function AppNav({ authenticated, creditBalance = 14, userInitial = 'L' }:
             <Gem className="gem" size={15} />
             {creditBalance === 0 ? 'Buy credits' : creditBalance}
           </Link>
-          <div className="avatar">{userInitial}</div>
+          <Link href="/account" className="avatar" title="Account settings">{userInitial}</Link>
         </>
       ) : (
         <>

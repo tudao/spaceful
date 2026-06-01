@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
+import { languagePrompt } from '@/lib/languages';
 import { z } from 'zod';
 import { SPACE_PALETTES, type SpaceMood } from '@/lib/utils';
 import { pickTemplate } from '@/components/space/engine/templateCatalog';
@@ -111,6 +112,14 @@ export async function POST(request: Request) {
   if (!parsed.success) return new Response('Invalid input', { status: 400 });
   const input = parsed.data;
 
+  // Fetch language preference
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('preferred_language')
+    .eq('user_id', user.id)
+    .single() as { data: { preferred_language: string } | null };
+  const langInstr = languagePrompt(profile?.preferred_language ?? 'en');
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -136,7 +145,7 @@ export async function POST(request: Request) {
           stream: true,
           system: `You are a creative designer generating personalised space themes for a personal journaling SaaS.
 Respond ONLY with a valid JSON object matching the schema — no markdown fences, no explanation.
-Colour values must be valid CSS hex (#RRGGBB). glow must be a valid rgba() string.`,
+Colour values must be valid CSS hex (#RRGGBB). glow must be a valid rgba() string.${langInstr ? `\nFor all text fields (placeholders, labels, titles), use the user's language: ${langInstr.trim()}` : ''}`,
           messages: [{ role: 'user', content: prompt }],
         });
 

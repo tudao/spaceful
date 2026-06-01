@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { getSettings } from '@/lib/platform-settings';
+import { languagePrompt } from '@/lib/languages';
 import { z } from 'zod';
 
 const ARCHETYPE_PROMPTS: Record<string, string> = {
@@ -44,13 +45,20 @@ export async function POST(request: Request) {
   if (!parsed.success) return new Response('Invalid input', { status: 400 });
   const { space_id, message, history = [] } = parsed.data;
 
-  // Verify ownership + fetch companion context
-  const { data: space } = await supabase
-    .from('spaces')
-    .select('companion_archetype, content_json, companion_context')
-    .eq('id', space_id)
-    .eq('user_id', user.id)
-    .single() as { data: { companion_archetype: string; content_json: Record<string, unknown>; companion_context: { facts: string[] } } | null };
+  // Verify ownership + fetch companion context; get language preference in parallel
+  const [{ data: space }, { data: profile }] = await Promise.all([
+    supabase
+      .from('spaces')
+      .select('companion_archetype, content_json, companion_context')
+      .eq('id', space_id)
+      .eq('user_id', user.id)
+      .single() as Promise<{ data: { companion_archetype: string; content_json: Record<string, unknown>; companion_context: { facts: string[] } } | null }>,
+    supabase
+      .from('profiles')
+      .select('preferred_language')
+      .eq('user_id', user.id)
+      .single() as Promise<{ data: { preferred_language: string } | null }>,
+  ]);
   if (!space) return new Response('Not found', { status: 404 });
 
   // Deduct credits via service role using platform setting
@@ -74,7 +82,8 @@ export async function POST(request: Request) {
   const factsPrompt = facts.length > 0
     ? `\n\nWhat you know about this person:\n${facts.map(f => `- ${f}`).join('\n')}`
     : '';
-  const systemPrompt = ARCHETYPE_PROMPTS[archetype] + '\nKeep responses to 3-4 sentences max.' + factsPrompt;
+  const lang = profile?.preferred_language ?? 'en';
+  const systemPrompt = ARCHETYPE_PROMPTS[archetype] + '\nKeep responses to 3-4 sentences max.' + languagePrompt(lang) + factsPrompt;
 
   const messages: { role: 'user' | 'assistant'; content: string }[] = [
     ...history,
@@ -89,7 +98,7 @@ export async function POST(request: Request) {
         const ai = new Anthropic();
         const resp = await ai.messages.create({
           model:      'claude-haiku-4-5-20251001',
-          max_tokens: 300,
+          max_tokens: 600,
           system:     systemPrompt,
           messages,
           stream:     true,

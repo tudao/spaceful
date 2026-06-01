@@ -130,6 +130,21 @@
   <p><strong>Fix:</strong> Added credit amount columns directly to the existing singleton table via <code>ALTER TABLE ... ADD COLUMN IF NOT EXISTS</code>. The <code>platform-settings.ts</code> lib queries <code>WHERE id = 1</code> and updates the same row. The admin settings page and API work identically — only the underlying DB pattern changed.</p>
 </div>
 
+<h2>Multi-Language Support (AI Content)</h2>
+
+<div class="section">
+  <h3><span class="tag decision">Decision</span> AI content only — UI strings stay English</h3>
+  <p>Added <code>profiles.preferred_language text default 'en'</code> (migration 009). Language is injected into the system prompt for: companion chat, companion daily message, space generation, weekly synthesis, and monthly letter. UI buttons/labels remain English for now.</p>
+  <p><strong>Why:</strong> The AI-generated content (companion responses, letters, synthesis) is what users actually read and care about. UI strings are secondary for a personal journaling product. Retrofitting UI i18n (next-intl + string extraction) can be done incrementally once demand is validated.</p>
+  <p><strong>Injection pattern:</strong> <code>languagePrompt(code)</code> returns an empty string for English (no overhead) and <code>"\nAlways respond in {language}. Do not switch to English."</code> for other languages. This is appended to the end of every AI system prompt.</p>
+  <p><strong>Space generation:</strong> Language is fetched from the user's profile at generation time and instructs the AI to use that language for all text fields (placeholders, labels, titles). Spaces are thus fixed in the language they were generated in.</p>
+</div>
+
+<div class="section">
+  <h3><span class="tag decision">Decision</span> Companion chat truncation — max_tokens 300→600</h3>
+  <p>Increased <code>max_tokens</code> from 300 to 600 on the companion chat Claude call. The system prompt instructs "3-4 sentences max" which is the right constraint; 300 tokens was cutting off verbose archetypes (poet, sage) mid-sentence. 600 tokens gives ~450 words — ample room for 4 complete sentences from any archetype.</p>
+</div>
+
 <h2>Open Questions Summary</h2>
 <ul>
   <li>Stripe <code>stripe_customer_id</code> column missing from profiles — add in follow-up migration</li>

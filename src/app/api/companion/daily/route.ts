@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
+import { languagePrompt } from '@/lib/languages';
 import { NextResponse } from 'next/server';
 import quotes from '@/data/quotes.json';
 
@@ -42,13 +43,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: cached.message, archetype: cached.archetype, quote });
   }
 
-  // Fetch space for archetype + content
-  const { data: space } = await supabase
-    .from('spaces')
-    .select('companion_archetype, content_json, display_name')
-    .eq('id', space_id)
-    .eq('user_id', user.id)
-    .single();
+  // Fetch space + profile language in parallel
+  const [{ data: space }, { data: profile }] = await Promise.all([
+    supabase
+      .from('spaces')
+      .select('companion_archetype, content_json, display_name')
+      .eq('id', space_id)
+      .eq('user_id', user.id)
+      .single() as Promise<{ data: { companion_archetype: string; content_json: Record<string, unknown>; display_name: string } | null }>,
+    supabase
+      .from('profiles')
+      .select('preferred_language')
+      .eq('user_id', user.id)
+      .single() as Promise<{ data: { preferred_language: string } | null }>,
+  ]);
 
   if (!space) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
@@ -66,7 +74,7 @@ export async function GET(request: Request) {
     const resp = await ai.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 180,
-      system: ARCHETYPE_PROMPTS[archetype] + ' Keep your message to 2-3 sentences. No lists.',
+      system: ARCHETYPE_PROMPTS[archetype] + ' Keep your message to 2-3 sentences. No lists.' + languagePrompt(profile?.preferred_language ?? 'en'),
       messages: [{
         role: 'user',
         content: `Write a brief daily message for ${name}. Their current focus: ${goals || 'living with intention'}. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}.`,

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createServiceClient } from '@/lib/supabase/server';
+import { languagePrompt } from '@/lib/languages';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
   // Find spaces with at least 2 snapshots, no letter yet this month
   const { data: spaces } = await svc
     .from('spaces')
-    .select('id, user_id, content_json, profiles!inner(username, email, email_digest_opted_out)')
+    .select('id, user_id, content_json, profiles!inner(username, email, email_digest_opted_out, preferred_language)')
     .filter('id', 'in', `(
       SELECT space_id FROM space_snapshots GROUP BY space_id HAVING COUNT(*) >= 2
     )`)
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
       id: string;
       user_id: string;
       content_json: Record<string, unknown> | null;
-      profiles: { username: string; email: string; email_digest_opted_out: boolean };
+      profiles: { username: string; email: string; email_digest_opted_out: boolean; preferred_language: string };
     }> | null };
 
   if (!spaces || spaces.length === 0) return NextResponse.json({ ok: true, letters: 0 });
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
       const resp = await ai.messages.create({
         model:      'claude-haiku-4-5-20251001',
         max_tokens: 400,
-        system:     'You write warm, specific, personal monthly letters for a personal space app. Speak in second person. Reference actual data — goals, habits, words. 5 sentences max. No generic affirmations. No bullet points.',
+        system:     'You write warm, specific, personal monthly letters for a personal space app. Speak in second person. Reference actual data — goals, habits, words. 5 sentences max. No generic affirmations. No bullet points.' + languagePrompt(space.profiles.preferred_language ?? 'en'),
         messages:   [{ role: 'user', content: buildPrompt(username, diff, prev.snapshot_at, curr.snapshot_at) }],
       });
       const block = resp.content[0];

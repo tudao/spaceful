@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createServiceClient } from '@/lib/supabase/server';
+import { languagePrompt } from '@/lib/languages';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
   // Spaces with ≥3 pulse entries this week, no synthesis yet today
   const { data: spaces } = await svc
     .from('spaces')
-    .select('id, user_id, profiles!inner(username, email, email_digest_opted_out)')
+    .select('id, user_id, profiles!inner(username, email, email_digest_opted_out, preferred_language)')
     .filter('id', 'in',
       `(SELECT space_id FROM daily_pulse_entries WHERE entry_date > '${weekAgo}' AND period IN ('morning','evening') GROUP BY space_id HAVING COUNT(*) >= 3)`
     )
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
       `(SELECT space_id FROM daily_pulse_entries WHERE entry_date = '${today}' AND period = 'weekly_synthesis')`
     )
     .limit(100) as {
-      data: Array<{ id: string; user_id: string; profiles: { username: string; email: string; email_digest_opted_out: boolean } }> | null
+      data: Array<{ id: string; user_id: string; profiles: { username: string; email: string; email_digest_opted_out: boolean; preferred_language: string } }> | null
     };
 
   if (!spaces || spaces.length === 0) return NextResponse.json({ ok: true, synthesised: 0 });
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
       const resp = await ai.messages.create({
         model:      'claude-haiku-4-5-20251001',
         max_tokens: 200,
-        system:     'You write warm, specific weekly synthesis notes for a personal journal app. 3 sentences. Reference actual words or themes from the entries. Second person. No bullet points.',
+        system:     'You write warm, specific weekly synthesis notes for a personal journal app. 3 sentences. Reference actual words or themes from the entries. Second person. No bullet points.' + languagePrompt(space.profiles.preferred_language ?? 'en'),
         messages:   [{ role: 'user', content: `Write a 3-sentence synthesis of ${username}'s week from these entries:\n\n${entriesText}` }],
       });
       const block = resp.content[0];
