@@ -77,22 +77,36 @@ function FocusHeroSection({ content, tokens, editing, onUpdate, styles, nudgeDay
     <section style={{ ...styles.card, padding: '22px 24px', position: 'relative', overflow: 'hidden', ...(nudgeRing ? { outline: `2px solid var(--sp-accent)`, outlineOffset: 1 } : {}) }}>
       <div style={{ position: 'absolute', right: -50, top: -50, width: 170, height: 170, borderRadius: '50%', background: 'radial-gradient(circle, var(--sp-glow), transparent 68%)' }} />
       <div style={styles.label}>This week / focus</div>
-      <div
-        contentEditable={editing || undefined}
-        suppressContentEditableWarning
-        onBlur={e => onUpdate({ heroTitle: e.currentTarget.innerText.trim() })}
-        style={{ position: 'relative', fontSize: 22, lineHeight: 1.28, fontWeight: 800, marginBottom: 12, color: 'var(--sp-text)', outline: 'none' }}
-      >
-        {content.heroTitle || (editing ? titlePlaceholder : '')}
+      <div style={{ position: 'relative', marginBottom: 12 }}>
+        <div
+          contentEditable={editing || undefined}
+          suppressContentEditableWarning
+          onBlur={e => onUpdate({ heroTitle: e.currentTarget.innerText.trim() })}
+          style={{ fontSize: 22, lineHeight: 1.28, fontWeight: 800, color: 'var(--sp-text)', outline: 'none', minHeight: editing ? '1.28em' : 0 }}
+        >
+          {content.heroTitle}
+        </div>
+        {editing && !content.heroTitle && (
+          <span style={{ position: 'absolute', top: 0, left: 0, fontSize: 22, lineHeight: 1.28, fontWeight: 800, color: styles.muted, pointerEvents: 'none', userSelect: 'none' }}>
+            {titlePlaceholder}
+          </span>
+        )}
       </div>
-      <p
-        contentEditable={editing || undefined}
-        suppressContentEditableWarning
-        onBlur={e => onUpdate({ heroNotes: e.currentTarget.innerText.trim() })}
-        style={{ position: 'relative', margin: 0, fontSize: 14, lineHeight: 1.85, color: 'var(--sp-text2)', minHeight: editing ? 58 : 0, outline: 'none' }}
-      >
-        {content.heroNotes || (editing ? notesPlaceholder : '')}
-      </p>
+      <div style={{ position: 'relative' }}>
+        <p
+          contentEditable={editing || undefined}
+          suppressContentEditableWarning
+          onBlur={e => onUpdate({ heroNotes: e.currentTarget.innerText.trim() })}
+          style={{ margin: 0, fontSize: 14, lineHeight: 1.85, color: 'var(--sp-text2)', minHeight: editing ? 58 : 0, outline: 'none' }}
+        >
+          {content.heroNotes}
+        </p>
+        {editing && !content.heroNotes && (
+          <span style={{ position: 'absolute', top: 0, left: 0, fontSize: 14, lineHeight: 1.85, color: styles.muted, pointerEvents: 'none', userSelect: 'none' }}>
+            {notesPlaceholder}
+          </span>
+        )}
+      </div>
     </section>
   );
 }
