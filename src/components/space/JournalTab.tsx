@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 interface PulseEntry {
   id: string;
   entry_date: string;
-  period: 'morning' | 'evening' | 'ai_letter';
+  period: 'morning' | 'evening' | 'ai_letter' | 'weekly_synthesis';
   body: string;
   created_at: string;
 }
@@ -19,9 +19,10 @@ interface JournalTabProps {
 }
 
 function periodLabel(p: string) {
-  if (p === 'morning') return '☀️ Morning';
-  if (p === 'evening') return '🌙 Evening';
-  return '✉️ Letter';
+  if (p === 'morning') return '☀️ Morning intention';
+  if (p === 'evening') return '🌙 Evening reflection';
+  if (p === 'weekly_synthesis') return '✨ Weekly synthesis';
+  return '✉️ Monthly letter';
 }
 
 function fmtDate(d: string) {
