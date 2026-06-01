@@ -432,9 +432,8 @@ function PlaceholderSection({ styles }: SectionProps) {
 function DailyPulseSection({ content: _content, editing: _editing, onUpdate, styles, spaceId, isOwner }: SectionProps) {
   const [morning, setMorning] = useState('');
   const [evening, setEvening] = useState('');
-  const h = new Date().getHours();
-  const showMorning = h >= 5 && h < 13;
-  const showEvening = h >= 13;
+  const [savedMorning, setSavedMorning] = useState(false);
+  const [savedEvening, setSavedEvening] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
 
   // Load today's saved entries on mount
@@ -446,8 +445,8 @@ function DailyPulseSection({ content: _content, editing: _editing, onUpdate, sty
         const todayEntries: { period: string; body: string }[] = (d.entries ?? []).filter((e: { entry_date: string }) => e.entry_date === today);
         const m = todayEntries.find(e => e.period === 'morning');
         const ev = todayEntries.find(e => e.period === 'evening');
-        if (m) setMorning(m.body);
-        if (ev) setEvening(ev.body);
+        if (m) { setMorning(m.body); setSavedMorning(true); }
+        if (ev) { setEvening(ev.body); setSavedEvening(true); }
       })
       .catch(() => {});
   }, [spaceId, isOwner, today]);
@@ -459,38 +458,47 @@ function DailyPulseSection({ content: _content, editing: _editing, onUpdate, sty
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ space_id: spaceId, period, body: body.trim(), entry_date: today }),
     });
+    if (period === 'morning') setSavedMorning(true);
+    else setSavedEvening(true);
     onUpdate({});
   }
 
+  const textareaStyle = { width: '100%', boxSizing: 'border-box' as const, resize: 'none' as const, background: 'var(--sp-chip-bg)', border: `1px solid ${styles.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, lineHeight: 1.65, color: 'var(--sp-text)', outline: 'none', minHeight: 64, fontFamily: "'Nunito',sans-serif" };
+  const savedBadge = { fontSize: 11, fontWeight: 700, color: styles.muted, marginLeft: 6 };
+
   return (
     <section style={{ ...styles.card, padding: '20px 22px' }}>
-      <div style={styles.label}>Daily pulse</div>
-      {showMorning && (
-        <div style={{ marginBottom: showEvening ? 14 : 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: styles.muted, marginBottom: 6 }}>☀️ Morning intention</div>
+      <div style={{ ...styles.label, marginBottom: 14 }}>Daily pulse · <span style={{ fontWeight: 600, textTransform: 'none' as const, letterSpacing: 0 }}>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: styles.muted, marginBottom: 6, display: 'flex', alignItems: 'center' }}>
+            ☀️ Morning intention
+            {savedMorning && <span style={savedBadge}>· saved</span>}
+          </div>
           <textarea
             value={morning}
-            onChange={e => setMorning(e.target.value)}
+            onChange={e => { setMorning(e.target.value); setSavedMorning(false); }}
             onBlur={() => save('morning', morning)}
             placeholder="What's your intention for today?"
             maxLength={280}
-            style={{ width: '100%', boxSizing: 'border-box', resize: 'none', background: 'var(--sp-chip-bg)', border: `1px solid ${styles.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, lineHeight: 1.65, color: 'var(--sp-text)', outline: 'none', minHeight: 48, fontFamily: "'Nunito',sans-serif" }}
+            style={textareaStyle}
           />
         </div>
-      )}
-      {showEvening && (
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: styles.muted, marginBottom: 6 }}>🌙 Evening reflection</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: styles.muted, marginBottom: 6, display: 'flex', alignItems: 'center' }}>
+            🌙 Evening reflection
+            {savedEvening && <span style={savedBadge}>· saved</span>}
+          </div>
           <textarea
             value={evening}
-            onChange={e => setEvening(e.target.value)}
+            onChange={e => { setEvening(e.target.value); setSavedEvening(false); }}
             onBlur={() => save('evening', evening)}
             placeholder="One thing you're proud of today."
             maxLength={280}
-            style={{ width: '100%', boxSizing: 'border-box', resize: 'none', background: 'var(--sp-chip-bg)', border: `1px solid ${styles.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, lineHeight: 1.65, color: 'var(--sp-text)', outline: 'none', minHeight: 48, fontFamily: "'Nunito',sans-serif" }}
+            style={textareaStyle}
           />
         </div>
-      )}
+      </div>
     </section>
   );
 }
