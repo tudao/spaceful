@@ -27,7 +27,7 @@ interface Props {
 }
 
 const PREVIEW_CONTENT: SpaceContent = {
-  title: "Laki's World",
+  title: "My Space",
   subtitle: 'A focused little world for weekly goals, thoughts, and momentum.',
   monogram: 'LW',
   goals: [
@@ -55,7 +55,7 @@ const PREVIEW_CONTENT: SpaceContent = {
     { id: 'r2', title: 'Personal dashboard patterns', meta: 'Queued', status: 'queued' },
     { id: 'r3', title: 'Launch checklist', meta: 'Done', status: 'done' },
   ],
-  quote: { text: 'Make the next small thing beautiful enough to keep going.', attribution: 'Laki' },
+  quote: { text: 'Make the next small thing beautiful enough to keep going.', attribution: 'Spaceful' },
   photo: { url: '', caption: 'A visual anchor for this season.' },
 };
 

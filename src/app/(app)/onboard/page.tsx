@@ -202,7 +202,7 @@ export default function OnboardPage() {
                   value={state.name}
                   onChange={e => setState(s => ({ ...s, name: e.target.value }))}
                   maxLength={40}
-                  placeholder="Laki's World"
+                  placeholder="My Space"
                   autoFocus
                   style={{ width: '100%', fontFamily: 'var(--font)', fontSize: 'clamp(22px,3vw,30px)', fontWeight: 800, textAlign: 'center', color: 'var(--app-text)', background: 'rgba(255,255,255,0.7)', border: '2px solid var(--app-border-strong)', borderRadius: 16, padding: '18px 22px', outline: 'none', transition: 'var(--t-fast)' }}
                 />

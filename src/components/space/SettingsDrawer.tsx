@@ -40,7 +40,7 @@ const PRIVACY_OPTIONS = [
 
 export function SettingsDrawer({
   open, onClose,
-  spaceName: initialName = "Laki's World",
+  spaceName: initialName = "My Space",
   visibility: initialVis = 'link_only',
   reactionsEnabled: initialRx = true,
   lastGenerated = 'May 30',

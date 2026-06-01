@@ -12,7 +12,7 @@ const PACKAGES = [
 ];
 
 const LEDGER = [
-  { icon: Sparkles,       label: 'Generated "Laki\'s World"', date: 'May 30', delta: -3 },
+  { icon: Sparkles,       label: 'Generated "My Space"', date: 'May 30', delta: -3 },
   { icon: Gift,           label: 'Signup gift',               date: 'May 30', delta: +3 },
   { icon: RefreshCw,      label: 'Subscription renewal',      date: 'May 01', delta: +20 },
   { icon: Sparkles,       label: 'Generated "nina-notebook"', date: 'Apr 28', delta: -3 },

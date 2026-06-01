@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/Toast';
 
 const QUEUE = [
   {
-    id: '1', username: '@laki', spaceName: "Laki's World",
+    id: '1', username: '@laki', spaceName: "My Space",
     submitted: '2 hours ago',
     tags: ['calm', 'cozy', 'dreamy'],
     goalsExcerpt: 'Write my first novel · Run 3× a week · Read 24 books',

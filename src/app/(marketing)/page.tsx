@@ -4,7 +4,7 @@ import { MiniSpace } from '@/components/space/MiniSpace';
 
 const TRIO = [
   { palette: 'ocean'    as const, title: 'Koa Drifts',       goals: ['surf', 'build', 'rest'] },
-  { palette: 'lavender' as const, title: "Laki's World",      goals: ['write', 'run', 'read'] },
+  { palette: 'lavender' as const, title: "My Space",      goals: ['write', 'run', 'read'] },
   { palette: 'rose'     as const, title: "Nina's Notebook",   goals: ['paint', 'plant', 'poetry'] },
 ];
 
@@ -14,7 +14,7 @@ const GALLERY_TEASER = [
   { palette: 'midnight' as const, title: 'Night Shift',      who: '@vex · bold' },
   { palette: 'ocean'    as const, title: 'Koa Drifts',       who: '@koa · calm' },
   { palette: 'rose'     as const, title: "Nina's Notebook",  who: '@nina · creative' },
-  { palette: 'lavender' as const, title: "Laki's World",     who: '@laki · dreamy' },
+  { palette: 'lavender' as const, title: "My Space",     who: '@laki · dreamy' },
 ];
 
 const STEPS = [

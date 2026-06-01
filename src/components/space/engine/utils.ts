@@ -41,14 +41,6 @@ export const BASE_TEMPLATE_SPECS: Record<string, TemplateSpec> = {
     cards: { style: 'glass', radius: 20, shadow: 'soft' },
     typography: { title_scale: 'xl', weight: 800, header_uppercase: false },
   },
-  'laki-world': {
-    version: 1,
-    layout: { header_style: 'botanical', sections: [...CORE_SECTIONS], max_width: 1100, density: 'rich' },
-    decoration: { type: 'botanicals', density: 'lush', animated: true, fixed_background: true },
-    scene: { image: '/templates/laki-world-anime.jpg', position: 'right', overlay: 'light' },
-    cards: { style: 'glass', radius: 20, shadow: 'medium' },
-    typography: { title_scale: 'xl', weight: 800, header_uppercase: false },
-  },
   cosmos: {
     version: 1,
     layout: { header_style: 'cosmic', sections: [...CORE_SECTIONS], max_width: 980, density: 'balanced' },

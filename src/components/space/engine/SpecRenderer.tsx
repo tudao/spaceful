@@ -34,7 +34,7 @@ export function SpecRenderer({ content, tokens, spec: specProp, isOwner, mode, o
   const border = hexA(p.accent, 0.28);
   const muted = hexA(p.text2, 0.66);
   const imageScene = Boolean(spec.scene?.image);
-  const sceneHeader = imageScene || tokens.template_id === 'laki-world' || spec.layout.header_style === 'botanical' || spec.layout.header_style === 'wave' || spec.decoration.type === 'clouds';
+  const sceneHeader = imageScene || spec.layout.header_style === 'botanical' || spec.layout.header_style === 'wave' || spec.decoration.type === 'clouds';
   const scenePosition = spec.scene?.position === 'left' ? 'left center' : spec.scene?.position === 'center' ? 'center center' : 'right center';
   const sceneOverlay = spec.scene?.overlay === 'dark'
     ? 'linear-gradient(90deg, rgba(8,12,34,.82), rgba(8,12,34,.46) 43%, rgba(8,12,34,.10))'

@@ -25,7 +25,7 @@ const MOOD_COLOR: Record<SpaceMood, string> = {
 
 // Fallback mock data shown when gallery has no approved spaces yet
 const MOCK_FEATURED: GallerySpace[] = [
-  { id: '1', slug: 'laki', display_name: "Laki's World",  username: 'laki',  mood: 'lavender', vibes: ['dreamy'],   gallery_featured_at: '2024-01-01', remix_count: 12 },
+  { id: '1', slug: 'demo', display_name: "My Space",  username: 'demo',  mood: 'lavender', vibes: ['dreamy'],   gallery_featured_at: '2024-01-01', remix_count: 12 },
   { id: '2', slug: 'arbor', display_name: 'Deep Green',   username: 'arbor', mood: 'forest',   vibes: ['grounded'], gallery_featured_at: '2024-01-01', remix_count: 5 },
   { id: '3', slug: 'vex', display_name: 'Night Shift',    username: 'vex',   mood: 'midnight', vibes: ['bold'],     gallery_featured_at: '2024-01-01', remix_count: 8 },
 ];
