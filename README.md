@@ -219,6 +219,79 @@ pnpm stripe:listen  # forward webhooks to localhost:3000
 
 ---
 
+## Deploying to production
+
+### 1. Create a Supabase project
+
+Go to [supabase.com](https://supabase.com) → New project. Once created, find your credentials at **Settings → API**.
+
+### 2. Push the schema
+
+```bash
+# Link your local repo to the remote project (get ref from the dashboard URL)
+npx supabase link --project-ref YOUR_PROJECT_REF
+
+# Push migrations to the remote database
+pnpm db:push
+```
+
+### 3. Initialize platform settings
+
+In the Supabase **SQL Editor**, run once:
+
+```sql
+INSERT INTO platform_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
+```
+
+### 4. Configure Supabase Auth
+
+In **Authentication → URL Configuration**:
+- **Site URL**: `https://your-domain.vercel.app`
+- **Redirect URLs**: `https://your-domain.vercel.app/**`
+
+### 5. Deploy to Vercel
+
+```bash
+npx vercel
+```
+
+Or connect your GitHub repo at [vercel.com](https://vercel.com) for automatic deploys on push.
+
+### 6. Add environment variables in Vercel
+
+Go to **Vercel Dashboard → your project → Settings → Environment Variables** and add:
+
+| Variable | Where to find it |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API → anon public |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role |
+| `ANTHROPIC_API_KEY` | platform.anthropic.com |
+| `STRIPE_SECRET_KEY` | Stripe Dashboard → Developers → API keys |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe Dashboard → Developers → API keys |
+| `STRIPE_WEBHOOK_SECRET` | After step 7 below |
+| `STRIPE_PRICE_CREDITS_5` | Stripe price ID for 5-credit pack |
+| `STRIPE_PRICE_CREDITS_10` | Stripe price ID for 10-credit pack |
+| `STRIPE_PRICE_CREDITS_20` | Stripe price ID for 20-credit pack |
+| `STRIPE_PRICE_SUBSCRIPTION` | Stripe price ID for monthly subscription |
+| `RESEND_API_KEY` | resend.com → API keys |
+| `RESEND_FROM_EMAIL` | Your verified sender address |
+| `NEXT_PUBLIC_APP_URL` | `https://your-domain.vercel.app` |
+
+### 7. Set up Stripe webhook (production)
+
+In the [Stripe Dashboard](https://dashboard.stripe.com) → **Webhooks → Add endpoint**:
+- **URL**: `https://your-domain.vercel.app/api/stripe/webhook`
+- **Events**: `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`
+
+Copy the `whsec_...` signing secret → add it as `STRIPE_WEBHOOK_SECRET` in Vercel.
+
+### 8. Redeploy
+
+After adding all environment variables, trigger a redeploy in Vercel so they take effect.
+
+---
+
 ## Stopping local services
 
 ```bash
